@@ -6,6 +6,7 @@ class RegisterReq(BaseModel):
     password: str
     company_name: str = ""
     role: str = "owner"
+    tenant_code: str = ""
 
 
 class LoginReq(BaseModel):

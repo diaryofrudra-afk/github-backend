@@ -2,6 +2,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from ..database import get_db
 from ..auth.dependencies import get_current_user
+from ..auth.service import hash_password
 from .models import OperatorCreate, OperatorUpdate, OperatorProfileUpdate
 
 router = APIRouter(prefix="/api/operators", tags=["operators"])
@@ -27,6 +28,14 @@ async def create_operator(body: OperatorCreate, user=Depends(get_current_user), 
             body.aadhaar, body.assigned, body.status, user["tenant_id"],
         ),
     )
+    # Auto-create a user account so the operator can log in
+    cursor2 = await db.execute("SELECT id FROM users WHERE phone = ?", (body.phone,))
+    if not await cursor2.fetchone():
+        user_id = str(uuid.uuid4())
+        await db.execute(
+            "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
+            (user_id, body.phone, hash_password(""), "operator", user["tenant_id"]),
+        )
     await db.commit()
     cursor = await db.execute(
         "SELECT * FROM operators WHERE id = ? AND tenant_id = ?", (operator_id, user["tenant_id"])
@@ -74,9 +83,20 @@ async def delete_operator(operator_id: str, user=Depends(get_current_user), db=D
     existing = await cursor.fetchone()
     if not existing:
         raise HTTPException(status_code=404, detail="Operator not found")
+    # Get phone before deleting
+    cursor2 = await db.execute(
+        "SELECT phone FROM operators WHERE id = ? AND tenant_id = ?", (operator_id, user["tenant_id"])
+    )
+    op_row = await cursor2.fetchone()
     await db.execute(
         "DELETE FROM operators WHERE id = ? AND tenant_id = ?", (operator_id, user["tenant_id"])
     )
+    # Also remove their user account
+    if op_row:
+        await db.execute(
+            "DELETE FROM users WHERE phone = ? AND role = 'operator' AND tenant_id = ?",
+            (op_row["phone"], user["tenant_id"]),
+        )
     await db.commit()
     return {"ok": True}
 

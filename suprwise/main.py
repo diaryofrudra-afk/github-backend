@@ -19,6 +19,9 @@ from .diagnostics.router import router as diagnostics_router
 from .owner_profile.router import router as owner_profile_router
 from .tenants.router import router as tenants_router
 from .sync.router import router as sync_router
+from .vehicle_lookup.router import router as vehicle_lookup_router
+from .gps.router import router as gps_router
+from .attendance.router import router as attendance_router
 
 
 @asynccontextmanager
@@ -54,6 +57,14 @@ app.include_router(diagnostics_router)
 app.include_router(owner_profile_router)
 app.include_router(tenants_router)
 app.include_router(sync_router)
+app.include_router(vehicle_lookup_router)
+app.include_router(gps_router)
+app.include_router(attendance_router)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Suprwise Backend API is running", "docs": "/docs"}
 
 
 @app.get("/api/health")

@@ -19,4 +19,5 @@ class AppStateImport(BaseModel):
     compliance: Optional[Dict[str, Dict[str, Any]]] = None
     maintenance: Optional[Dict[str, List[Dict[str, Any]]]] = None
     notifications: Optional[List[Dict[str, Any]]] = None
+    attendance: Optional[List[Dict[str, Any]]] = None
     ownerProfile: Optional[Dict[str, Any]] = None

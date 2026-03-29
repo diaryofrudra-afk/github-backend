@@ -277,6 +277,18 @@ CREATE TABLE IF NOT EXISTS diagnostics (
     UNIQUE(crane_reg, tenant_id)
 );
 
+CREATE TABLE IF NOT EXISTS attendance (
+    id TEXT PRIMARY KEY,
+    operator_key TEXT NOT NULL,
+    date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'present',
+    marked_by TEXT NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    UNIQUE(operator_key, date, tenant_id)
+);
+CREATE INDEX IF NOT EXISTS idx_attendance_operator ON attendance(operator_key, tenant_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date, tenant_id);
+
 CREATE TABLE IF NOT EXISTS integrations (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL DEFAULT '{}',

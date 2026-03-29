@@ -43,6 +43,21 @@ async def create_timesheet(body: TimesheetCreate, user=Depends(get_current_user)
             body.operator_id, body.notes, user["tenant_id"],
         ),
     )
+    
+    # Auto-mark attendance
+    attendance_id = str(uuid.uuid4())
+    await db.execute(
+        """INSERT INTO attendance (id, operator_key, date, status, marked_by, tenant_id)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(operator_key, date, tenant_id) DO UPDATE SET
+           status = 'present',
+           marked_by = 'operator'""",
+        (
+            attendance_id, body.operator_key, body.date,
+            "present", "operator", user["tenant_id"],
+        ),
+    )
+
     await db.commit()
     cursor = await db.execute(
         "SELECT * FROM timesheets WHERE id = ? AND tenant_id = ?", (sheet_id, user["tenant_id"])
@@ -85,13 +100,32 @@ async def update_timesheet(
 @router.delete("/{sheet_id}")
 async def delete_timesheet(sheet_id: str, user=Depends(get_current_user), db=Depends(get_db)):
     cursor = await db.execute(
-        "SELECT id FROM timesheets WHERE id = ? AND tenant_id = ?", (sheet_id, user["tenant_id"])
+        "SELECT * FROM timesheets WHERE id = ? AND tenant_id = ?", (sheet_id, user["tenant_id"])
     )
     existing = await cursor.fetchone()
     if not existing:
         raise HTTPException(status_code=404, detail="Timesheet not found")
+
+    op_key = existing["operator_key"]
+    date = existing["date"]
+    tenant = user["tenant_id"]
+
     await db.execute(
-        "DELETE FROM timesheets WHERE id = ? AND tenant_id = ?", (sheet_id, user["tenant_id"])
+        "DELETE FROM timesheets WHERE id = ? AND tenant_id = ?", (sheet_id, tenant)
     )
+
+    # If no other timesheets remain for this operator+date, remove auto-marked attendance
+    cursor = await db.execute(
+        "SELECT COUNT(*) as cnt FROM timesheets WHERE operator_key = ? AND date = ? AND tenant_id = ?",
+        (op_key, date, tenant),
+    )
+    row = await cursor.fetchone()
+    if row["cnt"] == 0:
+        # Only remove if it was auto-marked by operator, not manually set by owner
+        await db.execute(
+            "DELETE FROM attendance WHERE operator_key = ? AND date = ? AND tenant_id = ? AND marked_by = 'operator'",
+            (op_key, date, tenant),
+        )
+
     await db.commit()
     return {"ok": True}

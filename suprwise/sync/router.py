@@ -279,6 +279,20 @@ async def import_data(
             ),
         )
 
+    # attendance
+    for r in (body.attendance or []):
+        await db.execute(
+            """INSERT OR REPLACE INTO attendance
+               (id, operator_key, date, status, marked_by, tenant_id)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                r.get("id") or str(uuid.uuid4()),
+                r.get("operator_key", ""), r.get("date", ""),
+                r.get("status", "present"), r.get("marked_by", "owner"),
+                tid,
+            ),
+        )
+
     # ownerProfile — update the existing owner_profile for this tenant
     if body.ownerProfile:
         op = body.ownerProfile
@@ -336,6 +350,7 @@ async def export_data(user=Depends(get_current_user), db=Depends(get_db)):
     proformas = await fetch_all("proformas")
     challans = await fetch_all("challans")
     notifications = await fetch_all("notifications")
+    attendance_records = await fetch_all("attendance")
 
     # fuel_logs → fuelLogs keyed by crane_reg
     fuel_rows = await fetch_all("fuel_logs")
@@ -396,5 +411,6 @@ async def export_data(user=Depends(get_current_user), db=Depends(get_db)):
         "compliance": compliance,
         "maintenance": maintenance,
         "notifications": notifications,
+        "attendance": attendance_records,
         "ownerProfile": owner_profile,
     }

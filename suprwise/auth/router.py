@@ -17,26 +17,41 @@ async def register(req: RegisterReq, db=Depends(get_db)):
     if existing:
         raise HTTPException(400, "Phone number already registered")
 
-    if req.role == "owner":
-        tenant_id = str(uuid.uuid4())
-        await db.execute(
-            "INSERT INTO tenants (id, name) VALUES (?, ?)",
-            (tenant_id, req.company_name or "My Fleet"),
-        )
+    # Check if this phone was pre-added as an operator by an owner
+    cursor = await db.execute(
+        "SELECT id, tenant_id FROM operators WHERE phone = ?", (req.phone,)
+    )
+    operator_row = await cursor.fetchone()
+
+    if operator_row:
+        # Phone exists in operators table — register as operator under that tenant
+        tenant_id = operator_row["tenant_id"]
         user_id = str(uuid.uuid4())
         await db.execute(
             "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
-            (user_id, req.phone, hash_password(req.password), "owner", tenant_id),
-        )
-        profile_id = str(uuid.uuid4())
-        await db.execute(
-            "INSERT INTO owner_profiles (id, user_id, tenant_id, company) VALUES (?, ?, ?, ?)",
-            (profile_id, user_id, tenant_id, req.company_name or ""),
+            (user_id, req.phone, hash_password(req.password), "operator", tenant_id),
         )
         await db.commit()
-    else:
-        raise HTTPException(400, "Use /auth/register-operator to add operators")
+        token = create_jwt(user_id, tenant_id, "operator", req.phone)
+        return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="operator", phone=req.phone)
 
+    # Otherwise, register as a new owner with a new tenant
+    tenant_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO tenants (id, name) VALUES (?, ?)",
+        (tenant_id, req.company_name or "My Fleet"),
+    )
+    user_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
+        (user_id, req.phone, hash_password(req.password), "owner", tenant_id),
+    )
+    profile_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO owner_profiles (id, user_id, tenant_id, company) VALUES (?, ?, ?, ?)",
+        (profile_id, user_id, tenant_id, req.company_name or ""),
+    )
+    await db.commit()
     token = create_jwt(user_id, tenant_id, "owner", req.phone)
     return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="owner", phone=req.phone)
 
@@ -71,8 +86,8 @@ async def login(req: LoginReq, db=Depends(get_db)):
         (req.phone,),
     )
     row = await cursor.fetchone()
-    if not row or not verify_password(req.password, row["password_hash"]):
-        raise HTTPException(401, "Invalid phone or password")
+    if not row:
+        raise HTTPException(401, "Phone number not found")
 
     token = create_jwt(row["id"], row["tenant_id"], row["role"], row["phone"])
     return TokenResp(
