@@ -13,3 +13,4 @@ class OwnerProfileUpdate(BaseModel):
     gst: Optional[str] = None
     website: Optional[str] = None
     default_limit: Optional[str] = None
+    photo: Optional[str] = None

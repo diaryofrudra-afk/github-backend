@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from ..database import get_db
-from .models import RegisterReq, LoginReq, TokenResp, UserResp
+from .models import RegisterReq, LoginReq, ChangePasswordReq, TokenResp, UserResp
 from .service import hash_password, verify_password, create_jwt
 from .dependencies import get_current_user
 
@@ -94,6 +94,25 @@ async def login(req: LoginReq, db=Depends(get_db)):
         token=token, user_id=row["id"], tenant_id=row["tenant_id"],
         role=row["role"], phone=row["phone"],
     )
+
+
+@router.put("/change-password")
+async def change_password(req: ChangePasswordReq, user=Depends(get_current_user), db=Depends(get_db)):
+    cursor = await db.execute(
+        "SELECT password_hash FROM users WHERE id = ?", (user["user_id"],)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(404, "User not found")
+    if row["password_hash"] and req.old_password:
+        if not verify_password(req.old_password, row["password_hash"]):
+            raise HTTPException(400, "Current password is incorrect")
+    await db.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (hash_password(req.new_password), user["user_id"]),
+    )
+    await db.commit()
+    return {"message": "Password updated"}
 
 
 @router.get("/me", response_model=UserResp)

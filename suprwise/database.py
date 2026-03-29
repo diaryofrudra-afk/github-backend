@@ -25,6 +25,15 @@ async def init_db() -> None:
     schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
     with open(schema_path) as f:
         await _db.executescript(f.read())
+    # Migrations: add columns that may be missing on older databases
+    migrations = [
+        ("owner_profiles", "photo", "TEXT NOT NULL DEFAULT ''"),
+    ]
+    for table, col, col_type in migrations:
+        cursor = await _db.execute(f"PRAGMA table_info({table})")
+        cols = [r[1] for r in await cursor.fetchall()]
+        if col not in cols:
+            await _db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
     await _db.commit()
 
 

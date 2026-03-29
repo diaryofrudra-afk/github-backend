@@ -22,6 +22,11 @@ class TokenResp(BaseModel):
     phone: str
 
 
+class ChangePasswordReq(BaseModel):
+    old_password: str = ""
+    new_password: str
+
+
 class UserResp(BaseModel):
     user_id: str
     tenant_id: str

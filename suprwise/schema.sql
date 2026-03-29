@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS owner_profiles (
     state TEXT NOT NULL DEFAULT '',
     gst TEXT NOT NULL DEFAULT '',
     website TEXT NOT NULL DEFAULT '',
-    default_limit TEXT NOT NULL DEFAULT '8'
+    default_limit TEXT NOT NULL DEFAULT '8',
+    photo TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS cranes (

@@ -101,6 +101,76 @@ async def delete_operator(operator_id: str, user=Depends(get_current_user), db=D
     return {"ok": True}
 
 
+@router.get("/me/profile")
+async def get_my_operator_profile(user=Depends(get_current_user), db=Depends(get_db)):
+    """Operator fetches their own profile by phone number."""
+    cursor = await db.execute(
+        "SELECT id FROM operators WHERE phone = ? AND tenant_id = ?",
+        (user["phone"], user["tenant_id"]),
+    )
+    op = await cursor.fetchone()
+    if not op:
+        raise HTTPException(404, "Operator not found")
+    cursor = await db.execute(
+        "SELECT * FROM operator_profiles WHERE operator_id = ? AND tenant_id = ?",
+        (op["id"], user["tenant_id"]),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        return {"operator_id": op["id"], "photo": "", "bank": "", "ifsc": "", "account": "", "address": ""}
+    return dict(row)
+
+
+@router.put("/me/profile")
+async def update_my_operator_profile(
+    body: OperatorProfileUpdate,
+    user=Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Operator updates their own profile (photo, bank, etc.)."""
+    cursor = await db.execute(
+        "SELECT id FROM operators WHERE phone = ? AND tenant_id = ?",
+        (user["phone"], user["tenant_id"]),
+    )
+    op = await cursor.fetchone()
+    if not op:
+        raise HTTPException(404, "Operator not found")
+    operator_id = op["id"]
+    cursor = await db.execute(
+        "SELECT * FROM operator_profiles WHERE operator_id = ? AND tenant_id = ?",
+        (operator_id, user["tenant_id"]),
+    )
+    profile = await cursor.fetchone()
+    if profile:
+        fields = body.model_dump(exclude_none=True)
+        if fields:
+            set_clause = ", ".join(f"{k} = ?" for k in fields)
+            values = list(fields.values()) + [operator_id, user["tenant_id"]]
+            await db.execute(
+                f"UPDATE operator_profiles SET {set_clause} WHERE operator_id = ? AND tenant_id = ?",
+                values,
+            )
+            await db.commit()
+        cursor = await db.execute(
+            "SELECT * FROM operator_profiles WHERE operator_id = ? AND tenant_id = ?",
+            (operator_id, user["tenant_id"]),
+        )
+        return dict(await cursor.fetchone())
+    else:
+        profile_id = str(uuid.uuid4())
+        data = body.model_dump()
+        await db.execute(
+            """INSERT INTO operator_profiles (id, operator_id, tenant_id, photo, bank, ifsc, account, address)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (profile_id, operator_id, user["tenant_id"],
+             data.get("photo") or "", data.get("bank") or "",
+             data.get("ifsc") or "", data.get("account") or "", data.get("address") or ""),
+        )
+        await db.commit()
+        cursor = await db.execute("SELECT * FROM operator_profiles WHERE id = ?", (profile_id,))
+        return dict(await cursor.fetchone())
+
+
 @router.get("/{operator_id}/profile")
 async def get_operator_profile(operator_id: str, user=Depends(get_current_user), db=Depends(get_db)):
     cursor = await db.execute(
