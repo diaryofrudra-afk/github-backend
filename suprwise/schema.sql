@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS operators (
     aadhaar TEXT NOT NULL DEFAULT '',
     assigned TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'active',
+    salary REAL NOT NULL DEFAULT 0.0,
+    working_days REAL NOT NULL DEFAULT 26.0,
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
     UNIQUE(phone, tenant_id)
 );
@@ -295,4 +297,14 @@ CREATE TABLE IF NOT EXISTS integrations (
     data TEXT NOT NULL DEFAULT '{}',
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
     UNIQUE(tenant_id)
+);
+
+CREATE TABLE IF NOT EXISTS advance_payments (
+    id TEXT PRIMARY KEY,
+    operator_key TEXT NOT NULL,
+    date TEXT NOT NULL,
+    amount REAL NOT NULL,
+    notes TEXT,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    FOREIGN KEY(operator_key, tenant_id) REFERENCES operators(phone, tenant_id) ON DELETE CASCADE
 );

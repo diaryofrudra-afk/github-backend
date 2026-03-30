@@ -322,6 +322,34 @@ async def import_data(
                 ),
             )
 
+    # operatorProfiles - Update operators table directly
+    for op_key, prof in (body.operatorProfiles or {}).items():
+        await db.execute(
+            """UPDATE operators SET
+               salary = COALESCE(?, salary),
+               working_days = COALESCE(?, working_days)
+               WHERE (phone = ? OR id = ?) AND tenant_id = ?""",
+            (
+                prof.get("salary"), prof.get("workingDays"),
+                op_key, op_key, tid,
+            )
+        )
+
+    # advancePayments
+    for op_key, advances in (body.advancePayments or {}).items():
+        for r in (advances or []):
+            await db.execute(
+                """INSERT OR REPLACE INTO advance_payments
+                   (id, operator_key, date, amount, notes, tenant_id)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    r.get("id") or str(uuid.uuid4()),
+                    op_key, r.get("date", ""),
+                    r.get("amount", 0), r.get("notes", ""),
+                    tid,
+                )
+            )
+
     await db.commit()
     return {"ok": True}
 
@@ -394,6 +422,29 @@ async def export_data(user=Depends(get_current_user), db=Depends(get_db)):
     op_row = await cursor.fetchone()
     owner_profile = dict(op_row) if op_row else {}
 
+    # operatorProfiles
+    operator_profiles: dict = {}
+    for r in operators:
+        op_key = r.get("phone") or r.get("id")
+        if op_key:
+            operator_profiles[op_key] = {
+                "salary": float(r.get("salary", 0) or 0),
+                "workingDays": float(r.get("working_days", 26) or 26)
+            }
+
+    # advancePayments
+    adv_rows = await fetch_all("advance_payments")
+    advance_payments: dict = {}
+    for r in adv_rows:
+        key = r.get("operator_key", "")
+        adv = {
+            "id": r.get("id"),
+            "date": r.get("date"),
+            "amount": float(r.get("amount", 0) or 0),
+            "notes": r.get("notes") or ""
+        }
+        advance_payments.setdefault(key, []).append(adv)
+
     return {
         "cranes": cranes,
         "operators": operators,
@@ -413,4 +464,6 @@ async def export_data(user=Depends(get_current_user), db=Depends(get_db)):
         "notifications": notifications,
         "attendance": attendance_records,
         "ownerProfile": owner_profile,
+        "operatorProfiles": operator_profiles,
+        "advancePayments": advance_payments,
     }
