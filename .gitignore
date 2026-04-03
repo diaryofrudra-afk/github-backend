@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Distribution
+dist/
+dist-ssr/
+build/
+
+# Database
+data/
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Suprwise specific
+github-backend-main/data/
+reactcodewebapp-main/dist/
+reactcodewebapp-main/node_modules/
+github-backend-main/node_modules/
