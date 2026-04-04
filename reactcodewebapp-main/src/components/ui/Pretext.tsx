@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { useTextLayout } from '../../hooks/useTextLayout';
 import { walkLineRanges, layoutWithLines } from '../../lib/pretext/layout';
 
@@ -10,6 +10,20 @@ interface PretextProps {
   balanced?: boolean;
   className?: string;
   style?: React.CSSProperties;
+}
+
+// Parse font shorthand into individual properties for better React inline style support
+function parseFont(font: string): React.CSSProperties {
+  const match = font.match(/^(?:(normal|italic|oblique)\s+)?(?:(normal|bold|[1-9]\d{2,})\s+)?(\d+(?:\.\d+)?(?:px|em|rem|pt))\s+(.+)$/i);
+  if (!match) return { fontFamily: font };
+
+  const [, fontStyle, fontWeight, fontSize, fontFamily] = match;
+  return {
+    ...(fontStyle && { fontStyle }),
+    ...(fontWeight && { fontWeight: isNaN(Number(fontWeight)) ? fontWeight : Number(fontWeight) }),
+    fontSize,
+    fontFamily: fontFamily.replace(/['"]/g, ''),
+  };
 }
 
 export const Pretext: React.FC<PretextProps> = ({
@@ -25,6 +39,11 @@ export const Pretext: React.FC<PretextProps> = ({
   const [containerWidth, setContainerWidth] = useState<number>(maxWidth || 0);
   const { preparedWithSegments } = useTextLayout(text, font);
 
+  // Stable callback for ResizeObserver
+  const handleResize = useCallback((width: number) => {
+    setContainerWidth(width);
+  }, []);
+
   // Resize observer to handle dynamic container widths
   useEffect(() => {
     if (maxWidth) {
@@ -36,13 +55,13 @@ export const Pretext: React.FC<PretextProps> = ({
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
+        handleResize(entry.contentRect.width);
       }
     });
 
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [maxWidth]);
+  }, [maxWidth, handleResize]);
 
   const { lines, balancedWidth } = useMemo(() => {
     if (!preparedWithSegments || containerWidth <= 0) {
@@ -50,7 +69,7 @@ export const Pretext: React.FC<PretextProps> = ({
     }
 
     let targetWidth = containerWidth;
-    
+
     // Balanced Text: Find the tightest width that keeps the same line count
     if (balanced) {
       // walkLineRanges to get the widest line at current wrap
@@ -68,23 +87,32 @@ export const Pretext: React.FC<PretextProps> = ({
   }, [preparedWithSegments, containerWidth, lineHeight, balanced]);
 
   // Fallback to standard rendering if pretext fails or not ready
-  if (!preparedWithSegments) {
-    return <div ref={containerRef} className={className} style={{ ...style, font, lineHeight: `${lineHeight}px` }}>{text}</div>;
+  if (!preparedWithSegments || containerWidth <= 0) {
+    return (
+      <div ref={containerRef} className={className} style={{ ...style, ...parseFont(font), lineHeight: `${lineHeight}px` }}>
+        {text}
+      </div>
+    );
+  }
+
+  // Don't render empty content
+  if (lines.length === 0) {
+    return null;
   }
 
   return (
-    <div 
-      ref={containerRef} 
-      className={className} 
-      style={{ 
-        ...style, 
-        font, 
+    <div
+      ref={containerRef}
+      className={className}
+      style={{
+        ...style,
+        ...parseFont(font),
         lineHeight: `${lineHeight}px`,
         width: balanced ? `${balancedWidth}px` : '100%',
         display: balanced ? 'inline-block' : 'block',
       }}
     >
-      {lines && lines.map((line: any, i: number) => (
+      {lines.map((line: any, i: number) => (
         <div key={i} style={{ whiteSpace: 'pre', overflow: 'hidden' }}>
           {line.text}
         </div>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { PageId } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { Pretext } from '../ui/Pretext';
 
 interface SidebarNavItemProps {
   page: PageId;
@@ -22,7 +23,7 @@ export function SidebarNavItem({ page, label, icon, count, countId, countVariant
       onClick={() => setActivePage(page)}
     >
       {icon}
-      <span className="nav-label">{label}</span>
+      <span className="nav-label"><Pretext text={label} font="500 12px Inter" balanced /></span>
       {count !== undefined && count > 0 && (
         <span
           className={`nav-count ${countVariant === 'alert' ? 'alert' : ''}`}

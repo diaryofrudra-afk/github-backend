@@ -1,3 +1,5 @@
+import { Pretext } from './Pretext';
+
 type BadgeVariant = 'green' | 'red' | 'yellow' | 'amber' | 'blue' | 'default';
 
 interface BadgeProps {
@@ -8,6 +10,8 @@ interface BadgeProps {
 
 export function Badge({ label, variant = 'default', className }: BadgeProps) {
   return (
-    <span className={`badge badge-${variant} ${className || ''}`}>{label}</span>
+    <span className={`badge badge-${variant} ${className || ''}`}>
+      <Pretext text={label} font="700 8px 'Plus Jakarta Sans'" balanced />
+    </span>
   );
 }

@@ -1,4 +1,5 @@
 import { useApp } from '../../context/AppContext';
+import { Pretext } from './Pretext';
 
 const ICONS: Record<string, string> = {
   success: '<circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/>',
@@ -20,7 +21,7 @@ export function ToastContainer() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
             stroke={COLORS[t.type]} strokeWidth="2.5" strokeLinecap="round"
             dangerouslySetInnerHTML={{ __html: ICONS[t.type] }} />
-          <span>{t.message}</span>
+          <span><Pretext text={t.message} font="500 12px Inter" balanced /></span>
         </div>
       ))}
     </div>

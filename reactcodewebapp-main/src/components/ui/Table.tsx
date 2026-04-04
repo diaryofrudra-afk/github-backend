@@ -22,7 +22,7 @@ export function Table({ columns, children, className }: TableProps) {
           <tr>
             {columns.map(c => (
               <th key={c.key} style={c.width ? { width: c.width } : undefined}>
-                {c.label}
+                <Pretext text={c.label} font="700 9px Inter" balanced />
               </th>
             ))}
           </tr>

@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(file *)"
+      "Bash(file *)",
+      "Bash(npm run *)",
+      "Bash(npm test)",
+      "Bash(sleep *)",
+      "Bash(npm start)",
+      "Bash(curl *)",
+      "Bash(uvicorn *)",
+      "Bash(lsof *)"
     ]
-  }
+  },
+  "$version": 3
 }
