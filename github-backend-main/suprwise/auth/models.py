@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class RegisterReq(BaseModel):
     phone: str
+    email: str = ""
     password: str
     company_name: str = ""
     role: str = "owner"
@@ -10,7 +11,8 @@ class RegisterReq(BaseModel):
 
 
 class LoginReq(BaseModel):
-    phone: str
+    phone: str = ""
+    email: str = ""
     password: str
 
 
@@ -20,6 +22,8 @@ class TokenResp(BaseModel):
     tenant_id: str
     role: str
     phone: str
+    email: str = ""
+    email_verified: bool = False
 
 
 class ChangePasswordReq(BaseModel):
@@ -32,3 +36,7 @@ class UserResp(BaseModel):
     tenant_id: str
     role: str
     phone: str
+    email: str = ""
+    email_verified: bool = False
+
+

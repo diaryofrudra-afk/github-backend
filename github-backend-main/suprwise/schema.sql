@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS tenants (
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     phone TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL DEFAULT '',
+    email_verified INTEGER NOT NULL DEFAULT 0,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('owner', 'operator')),
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
@@ -297,6 +299,20 @@ CREATE TABLE IF NOT EXISTS integrations (
     UNIQUE(tenant_id)
 );
 
+-- Per-user Blackbuck credentials (encrypted at rest)
+-- Scoped to user_id so NO other user (even same tenant) can access
+CREATE TABLE IF NOT EXISTS blackbuck_credentials (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    auth_token_encrypted TEXT NOT NULL,
+    fleet_owner_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_bb_creds_user ON blackbuck_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_bb_creds_tenant ON blackbuck_credentials(tenant_id);
+
 CREATE TABLE IF NOT EXISTS advance_payments (
     id TEXT PRIMARY KEY,
     operator_key TEXT NOT NULL,
@@ -306,3 +322,14 @@ CREATE TABLE IF NOT EXISTS advance_payments (
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
     FOREIGN KEY(operator_key, tenant_id) REFERENCES operators(phone, tenant_id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS sms_otps (
+    id TEXT PRIMARY KEY,
+    phone TEXT NOT NULL,
+    otp TEXT NOT NULL,
+    purpose TEXT NOT NULL DEFAULT 'registration',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sms_otps_phone ON sms_otps(phone);

@@ -17,7 +17,9 @@ import type {
   OwnerProfile,
 } from '../types';
 
-const BASE = '/api';
+const BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE = BASE.endsWith('/') ? BASE.slice(0, -1) : BASE;
+const isProxy = !BASE.startsWith('http');
 
 // ── Token helpers ────────────────────────────────────────────────────────────
 
@@ -39,10 +41,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${BASE}${path}`, {
+  const url = isProxy ? `${BASE}${path}` : `${API_BASE}${path}`;
+  if (!isProxy) {
+    headers['Accept'] = 'application/json';
+  }
+  const res = await fetch(url, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    mode: isProxy ? undefined : 'cors',
   });
   if (res.status === 401) {
     clearToken();
@@ -51,7 +58,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    try {
+      const json = JSON.parse(text);
+      const detail = json.detail;
+      if (typeof detail === 'string') throw new Error(detail);
+      if (Array.isArray(detail)) throw new Error(detail.map((d: any) => d.msg).join(', '));
+      throw new Error(String(detail) || `HTTP ${res.status}`);
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      throw new Error(text || `HTTP ${res.status}`);
+    }
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
@@ -65,6 +81,8 @@ export interface AuthResponse {
   tenant_id: string;
   role: string;
   phone: string;
+  email: string;
+  email_verified: boolean;
 }
 
 export interface MeResponse {
@@ -72,6 +90,8 @@ export interface MeResponse {
   tenant_id: string;
   role: string;
   phone: string;
+  email: string;
+  email_verified: boolean;
 }
 
 // ── Maintenance entry type (inline since MaintenanceRecord is a nested map) ──
@@ -97,11 +117,11 @@ function mapToSnakeCase(obj: any): any {
 export const api = {
 
   // Auth
-  login(phone: string, password: string): Promise<AuthResponse> {
-    return request('POST', '/auth/login', { phone, password });
+  login(phone: string, password: string, email?: string): Promise<AuthResponse> {
+    return request('POST', '/auth/login', { phone, password, email });
   },
-  register(phone: string, password: string, role: string, company_name?: string, tenant_code?: string): Promise<AuthResponse> {
-    return request('POST', '/auth/register', { phone, password, role, company_name, tenant_code });
+  register(phone: string, password: string, role: string, company_name?: string, tenant_code?: string, email?: string): Promise<AuthResponse> {
+    return request('POST', '/auth/register', { phone, password, role, company_name, tenant_code, email });
   },
   me(): Promise<MeResponse> {
     return request('GET', '/auth/me');
@@ -384,5 +404,13 @@ export const api = {
   // Password
   changePassword(oldPassword: string, newPassword: string): Promise<{ message: string }> {
     return request('PUT', '/auth/change-password', { old_password: oldPassword, new_password: newPassword });
+  },
+
+  // SMS OTP
+  sendSmsOtp(phone: string, purpose?: string): Promise<{ success: boolean; message: string; otp_id?: string; expires_in_minutes?: number }> {
+    return request('POST', '/sms-otp/send', { phone, purpose: purpose || 'registration' });
+  },
+  verifySmsOtp(phone: string, otp: string, purpose?: string): Promise<{ success: boolean; message: string; phone?: string; purpose?: string }> {
+    return request('POST', '/sms-otp/verify', { phone, otp, purpose: purpose || 'registration' });
   },
 };

@@ -11,6 +11,8 @@ async def get_current_user(authorization: str = Header(...)) -> dict:
             "tenant_id": payload["tenant_id"],
             "role": payload["role"],
             "phone": payload["phone"],
+            "email": payload.get("email", ""),
+            "email_verified": payload.get("email_verified", False),
         }
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")

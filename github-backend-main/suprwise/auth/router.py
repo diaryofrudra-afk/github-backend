@@ -1,3 +1,4 @@
+import re
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from ..database import get_db
@@ -17,6 +18,13 @@ async def register(req: RegisterReq, db=Depends(get_db)):
     if existing:
         raise HTTPException(400, "Phone number already registered")
 
+    cursor = await db.execute(
+        "SELECT id FROM users WHERE email = ?", (req.email,)
+    )
+    existing_email = await cursor.fetchone()
+    if existing_email:
+        raise HTTPException(400, "Email already registered")
+
     # Check if this phone was pre-added as an operator by an owner
     cursor = await db.execute(
         "SELECT id, tenant_id FROM operators WHERE phone = ?", (req.phone,)
@@ -24,18 +32,16 @@ async def register(req: RegisterReq, db=Depends(get_db)):
     operator_row = await cursor.fetchone()
 
     if operator_row:
-        # Phone exists in operators table — register as operator under that tenant
         tenant_id = operator_row["tenant_id"]
         user_id = str(uuid.uuid4())
         await db.execute(
-            "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
-            (user_id, req.phone, hash_password(req.password), "operator", tenant_id),
+            "INSERT INTO users (id, phone, email, email_verified, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, req.phone, req.email, 0, hash_password(req.password), "operator", tenant_id),
         )
         await db.commit()
-        token = create_jwt(user_id, tenant_id, "operator", req.phone)
-        return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="operator", phone=req.phone)
+        token = create_jwt(user_id, tenant_id, "operator", req.phone, email=req.email, email_verified=False)
+        return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="operator", phone=req.phone, email=req.email, email_verified=False)
 
-    # Otherwise, register as a new owner with a new tenant
     tenant_id = str(uuid.uuid4())
     await db.execute(
         "INSERT INTO tenants (id, name) VALUES (?, ?)",
@@ -43,8 +49,8 @@ async def register(req: RegisterReq, db=Depends(get_db)):
     )
     user_id = str(uuid.uuid4())
     await db.execute(
-        "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
-        (user_id, req.phone, hash_password(req.password), "owner", tenant_id),
+        "INSERT INTO users (id, phone, email, email_verified, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (user_id, req.phone, req.email, 0, hash_password(req.password), "owner", tenant_id),
     )
     profile_id = str(uuid.uuid4())
     await db.execute(
@@ -52,8 +58,8 @@ async def register(req: RegisterReq, db=Depends(get_db)):
         (profile_id, user_id, tenant_id, req.company_name or ""),
     )
     await db.commit()
-    token = create_jwt(user_id, tenant_id, "owner", req.phone)
-    return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="owner", phone=req.phone)
+    token = create_jwt(user_id, tenant_id, "owner", req.phone, email=req.email, email_verified=False)
+    return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="owner", phone=req.phone, email=req.email, email_verified=False)
 
 
 @router.post("/register-operator", response_model=TokenResp)
@@ -70,29 +76,57 @@ async def register_operator(req: RegisterReq, user=Depends(get_current_user), db
 
     user_id = str(uuid.uuid4())
     await db.execute(
-        "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
-        (user_id, req.phone, hash_password(req.password), "operator", user["tenant_id"]),
+        "INSERT INTO users (id, phone, email, email_verified, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (user_id, req.phone, req.email, 0, hash_password(req.password), "operator", user["tenant_id"]),
     )
     await db.commit()
 
     token = create_jwt(user_id, user["tenant_id"], "operator", req.phone)
-    return TokenResp(token=token, user_id=user_id, tenant_id=user["tenant_id"], role="operator", phone=req.phone)
+    return TokenResp(token=token, user_id=user_id, tenant_id=user["tenant_id"], role="operator", phone=req.phone, email=req.email, email_verified=False)
 
 
 @router.post("/login", response_model=TokenResp)
 async def login(req: LoginReq, db=Depends(get_db)):
-    cursor = await db.execute(
-        "SELECT id, phone, password_hash, role, tenant_id FROM users WHERE phone = ?",
-        (req.phone,),
-    )
+    if not req.phone and not req.email:
+        raise HTTPException(400, "Phone or email is required")
+    # Allow login by phone OR email — but prioritize phone when provided
+    # (legacy users may have empty email, so we don't require both to match)
+    if req.phone:
+        cursor = await db.execute(
+            "SELECT id, phone, email, email_verified, password_hash, role, tenant_id FROM users WHERE phone = ?",
+            (req.phone,),
+        )
+    else:
+        cursor = await db.execute(
+            "SELECT id, phone, email, email_verified, password_hash, role, tenant_id FROM users WHERE email = ?",
+            (req.email,),
+        )
+
     row = await cursor.fetchone()
     if not row:
-        raise HTTPException(401, "Phone number not found")
+        raise HTTPException(401, "Credentials not found")
 
-    token = create_jwt(row["id"], row["tenant_id"], row["role"], row["phone"])
+    # Verify password
+    pw_hash = row["password_hash"]
+    if pw_hash:
+        if not verify_password(req.password, pw_hash):
+            raise HTTPException(401, "Incorrect password")
+
+    user_id = row["id"]
+    tenant_id = row["tenant_id"]
+    role = row["role"]
+    phone = row["phone"]
+    email = row["email"]
+    email_verified = bool(row["email_verified"])
+
     return TokenResp(
-        token=token, user_id=row["id"], tenant_id=row["tenant_id"],
-        role=row["role"], phone=row["phone"],
+        token=create_jwt(user_id, tenant_id, role, phone, email=email, email_verified=email_verified),
+        user_id=user_id,
+        tenant_id=tenant_id,
+        role=role,
+        phone=phone,
+        email=email,
+        email_verified=email_verified,
     )
 
 
@@ -117,4 +151,13 @@ async def change_password(req: ChangePasswordReq, user=Depends(get_current_user)
 
 @router.get("/me", response_model=UserResp)
 async def me(user=Depends(get_current_user)):
-    return UserResp(**user)
+    return UserResp(
+        user_id=user["user_id"],
+        tenant_id=user["tenant_id"],
+        role=user["role"],
+        phone=user["phone"],
+        email=user.get("email", ""),
+        email_verified=bool(user.get("email_verified", 0)),
+    )
+
+

@@ -28,12 +28,32 @@ async def init_db() -> None:
     # Migrations: add columns that may be missing on older databases
     migrations = [
         ("owner_profiles", "photo", "TEXT NOT NULL DEFAULT ''"),
+        ("users", "email", "TEXT NOT NULL DEFAULT ''"),
+        ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
     ]
     for table, col, col_type in migrations:
         cursor = await _db.execute(f"PRAGMA table_info({table})")
         cols = [r[1] for r in await cursor.fetchall()]
         if col not in cols:
             await _db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
+
+    # Add email index if it doesn't exist yet (must be after column migration)
+    await _db.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+
+    # Ensure sms_otps table exists (SMS OTP via Fast2SMS)
+    await _db.executescript("""
+        CREATE TABLE IF NOT EXISTS sms_otps (
+            id TEXT PRIMARY KEY,
+            phone TEXT NOT NULL,
+            otp TEXT NOT NULL,
+            purpose TEXT NOT NULL DEFAULT 'registration',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_sms_otps_phone ON sms_otps(phone);
+    """)
+
     await _db.commit()
 
 

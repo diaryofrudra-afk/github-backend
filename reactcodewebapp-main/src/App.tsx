@@ -30,10 +30,14 @@ export default function App() {
   // Login / register form state
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+
+  // Show/hide password
+  const [showPassword, setShowPassword] = useState(false);
 
   function loadDataFromAPI() {
     api.exportAll()
@@ -117,7 +121,7 @@ export default function App() {
         setUser(null);
         setUserRole(null);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleSignOut() {
@@ -132,14 +136,14 @@ export default function App() {
     setAuthLoading(true);
     try {
       if (mode === 'login') {
-        const res = await api.login(phone, password);
+        const res = await api.login(phone, password, email || undefined);
         setToken(res.token);
         setUser(res.phone);
         setUserRole(res.role);
         setActivePage(res.role === 'operator' ? 'logger' : 'fleet');
         loadDataFromAPI();
-      } else {
-        const res = await api.register(phone, password, 'owner', companyName);
+      } else if (mode === 'register') {
+        const res = await api.register(phone, password, 'owner', companyName, undefined, email || undefined);
         setToken(res.token);
         setUser(res.phone);
         setUserRole(res.role);
@@ -161,13 +165,15 @@ export default function App() {
         alignItems: 'center',
         justifyContent: 'center',
         background: 'var(--bg)',
+        padding: '20px',
       }}>
         <form onSubmit={handleSubmit} style={{
           background: 'var(--bg2)',
           border: '1px solid var(--border)',
           borderRadius: '16px',
           padding: '40px',
-          minWidth: '320px',
+          width: '100%',
+          maxWidth: '400px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -179,45 +185,31 @@ export default function App() {
             {mode === 'login' ? 'Sign in to your account' : 'Create a new account'}
           </div>
 
-          {/* Login / Register toggle */}
+          {/* Mode toggle buttons */}
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setAuthError(''); }}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: mode === 'login' ? 'var(--accent)' : 'var(--bg3)',
-                color: mode === 'login' ? '#fff' : 'var(--t2)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('register'); setAuthError(''); }}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: mode === 'register' ? 'var(--accent)' : 'var(--bg3)',
-                color: mode === 'register' ? '#fff' : 'var(--t2)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              Register
-            </button>
+            {(['login', 'register'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => { setMode(m); setAuthError(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: mode === m ? 'var(--accent)' : 'var(--bg3)',
+                  color: mode === m ? '#fff' : 'var(--t2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                {m === 'login' ? 'Login' : 'Register'}
+              </button>
+            ))}
           </div>
 
-
+          {/* Phone input */}
           <input
             type="tel"
             value={phone}
@@ -236,11 +228,13 @@ export default function App() {
             autoFocus
           />
 
+          {/* Email input */}
           <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Password (optional)"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Email address"
+            required={mode === 'register'}
             style={{
               padding: '10px 14px',
               background: 'var(--bg3)',
@@ -252,6 +246,48 @@ export default function App() {
             }}
           />
 
+          {/* Password input with show/hide toggle */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              style={{
+                width: '100%',
+                padding: '10px 40px 10px 14px',
+                background: 'var(--bg3)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                color: 'var(--t1)',
+                fontSize: '14px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                fontSize: '16px',
+                color: 'var(--t3)',
+              }}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
+
+          {/* Company name (register only) */}
           {mode === 'register' && (
             <input
               type="text"
@@ -270,13 +306,20 @@ export default function App() {
             />
           )}
 
-
+          {/* Error message */}
           {authError && (
-            <div style={{ fontSize: '13px', color: 'var(--error, #e53e3e)', padding: '8px 12px', background: 'var(--bg3)', borderRadius: '6px' }}>
+            <div style={{
+              fontSize: '13px',
+              color: 'var(--error, #e53e3e)',
+              padding: '8px 12px',
+              background: 'var(--bg3)',
+              borderRadius: '6px',
+            }}>
               {authError}
             </div>
           )}
 
+          {/* Submit button */}
           <button
             type="submit"
             disabled={authLoading}
@@ -294,6 +337,7 @@ export default function App() {
           >
             {authLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
+
         </form>
       </div>
     );
@@ -302,30 +346,30 @@ export default function App() {
   return (
     <div id="app-shell" className={`visible${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <div className="body-split">
-      <Sidebar onSignOut={handleSignOut} />
-      <div className="page-content">
-        {userRole === 'owner' && (
-          <>
-            <ErrorBoundary><FleetPage active={activePage === 'fleet'} /></ErrorBoundary>
-            <ErrorBoundary><OperatorsPage active={activePage === 'operators'} /></ErrorBoundary>
-            <ErrorBoundary><EarningsPage active={activePage === 'earnings'} /></ErrorBoundary>
-            <ErrorBoundary><AttendancePage active={activePage === 'attendance'} /></ErrorBoundary>
-            <ErrorBoundary><AnalyticsPage active={activePage === 'analytics'} /></ErrorBoundary>
-            <ErrorBoundary><BillingPage active={activePage === 'billing'} /></ErrorBoundary>
-            <ErrorBoundary><GPSPage active={activePage === 'gps'} /></ErrorBoundary>
-            <ErrorBoundary><FuelPage active={activePage === 'fuel'} /></ErrorBoundary>
-            <ErrorBoundary><CamerasPage active={activePage === 'cameras'} /></ErrorBoundary>
-            <ErrorBoundary><DiagnosticsPage active={activePage === 'diagnostics'} /></ErrorBoundary>
-          </>
-        )}
-        {userRole === 'operator' && (
-          <>
-            <ErrorBoundary><LoggerPage active={activePage === 'logger'} /></ErrorBoundary>
-            <ErrorBoundary><OpHistoryPage active={activePage === 'op-history'} /></ErrorBoundary>
-            <ErrorBoundary><AttendancePage active={activePage === 'attendance'} /></ErrorBoundary>
-          </>
-        )}
-      </div>
+        <Sidebar onSignOut={handleSignOut} />
+        <div className="page-content">
+          {userRole === 'owner' && (
+            <>
+              <ErrorBoundary><FleetPage active={activePage === 'fleet'} /></ErrorBoundary>
+              <ErrorBoundary><OperatorsPage active={activePage === 'operators'} /></ErrorBoundary>
+              <ErrorBoundary><EarningsPage active={activePage === 'earnings'} /></ErrorBoundary>
+              <ErrorBoundary><AttendancePage active={activePage === 'attendance'} /></ErrorBoundary>
+              <ErrorBoundary><AnalyticsPage active={activePage === 'analytics'} /></ErrorBoundary>
+              <ErrorBoundary><BillingPage active={activePage === 'billing'} /></ErrorBoundary>
+              <ErrorBoundary><GPSPage active={activePage === 'gps'} /></ErrorBoundary>
+              <ErrorBoundary><FuelPage active={activePage === 'fuel'} /></ErrorBoundary>
+              <ErrorBoundary><CamerasPage active={activePage === 'cameras'} /></ErrorBoundary>
+              <ErrorBoundary><DiagnosticsPage active={activePage === 'diagnostics'} /></ErrorBoundary>
+            </>
+          )}
+          {userRole === 'operator' && (
+            <>
+              <ErrorBoundary><LoggerPage active={activePage === 'logger'} /></ErrorBoundary>
+              <ErrorBoundary><OpHistoryPage active={activePage === 'op-history'} /></ErrorBoundary>
+              <ErrorBoundary><AttendancePage active={activePage === 'attendance'} /></ErrorBoundary>
+            </>
+          )}
+        </div>
       </div>
       <MobileDrawer
         open={drawerOpen}

@@ -233,11 +233,18 @@ export interface BlackbuckVehicle {
   longitude?: number;
   speed?: number;
   last_updated?: string;
+  engine_on?: boolean;
+  ignition_status?: string;
+  ignition_lock?: boolean;
+  signal?: string;
+  address?: string;
   [key: string]: unknown;
 }
 
 export interface BlackbuckData {
   vehicles: BlackbuckVehicle[];
+  error?: string;
+  is_mock?: boolean;
   [key: string]: unknown;
 }
 
