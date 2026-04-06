@@ -2,9 +2,10 @@ import re
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from ..database import get_db
-from .models import RegisterReq, LoginReq, ChangePasswordReq, TokenResp, UserResp
+from .models import RegisterReq, LoginReq, ChangePasswordReq, TokenResp, UserResp, SendLoginOtpReq, VerifyLoginOtpReq, RegisterWithOtpReq
 from .service import hash_password, verify_password, create_jwt
 from .dependencies import get_current_user
+from ..sms_otp.service import create_and_send_sms_otp, verify_sms_otp
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -147,6 +148,135 @@ async def change_password(req: ChangePasswordReq, user=Depends(get_current_user)
     )
     await db.commit()
     return {"message": "Password updated"}
+
+
+@router.post("/register-with-otp", response_model=TokenResp)
+async def register_with_otp(req: RegisterWithOtpReq, db=Depends(get_db)):
+    """
+    Register a new user via OTP (no password required).
+    - Verifies OTP
+    - Creates tenant and user
+    - Returns JWT token
+    """
+    # Verify OTP first
+    valid = await verify_sms_otp(req.phone, req.otp, "registration")
+    if not valid:
+        raise HTTPException(401, "Invalid or expired OTP")
+
+    # Check phone already registered
+    cursor = await db.execute(
+        "SELECT id FROM users WHERE phone = ?", (req.phone,)
+    )
+    existing = await cursor.fetchone()
+    if existing:
+        raise HTTPException(400, "Phone number already registered")
+
+    # Check email already registered
+    if req.email:
+        cursor = await db.execute(
+            "SELECT id FROM users WHERE email = ?", (req.email,)
+        )
+        existing_email = await cursor.fetchone()
+        if existing_email:
+            raise HTTPException(400, "Email already registered")
+
+    # Check if this phone was pre-added as an operator
+    cursor = await db.execute(
+        "SELECT id, tenant_id FROM operators WHERE phone = ?", (req.phone,)
+    )
+    operator_row = await cursor.fetchone()
+
+    if operator_row:
+        tenant_id = operator_row["tenant_id"]
+        user_id = str(uuid.uuid4())
+        await db.execute(
+            "INSERT INTO users (id, phone, email, email_verified, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, req.phone, req.email, 1, "", "operator", tenant_id),
+        )
+        await db.commit()
+        token = create_jwt(user_id, tenant_id, "operator", req.phone, email=req.email, email_verified=True)
+        return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="operator", phone=req.phone, email=req.email, email_verified=True)
+
+    # Create new owner
+    tenant_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO tenants (id, name) VALUES (?, ?)",
+        (tenant_id, req.name or "My Fleet"),
+    )
+    user_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO users (id, phone, email, email_verified, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (user_id, req.phone, req.email, 1, "", "owner", tenant_id),
+    )
+    profile_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO owner_profiles (id, user_id, tenant_id, company) VALUES (?, ?, ?, ?)",
+        (profile_id, user_id, tenant_id, req.name or ""),
+    )
+    await db.commit()
+    token = create_jwt(user_id, tenant_id, "owner", req.phone, email=req.email, email_verified=True)
+    return TokenResp(token=token, user_id=user_id, tenant_id=tenant_id, role="owner", phone=req.phone, email=req.email, email_verified=True)
+
+
+@router.post("/login-with-otp")
+async def login_with_otp(req: SendLoginOtpReq, db=Depends(get_db)):
+    """
+    Send OTP for passwordless login.
+    - Validates phone number exists in users table
+    - Generates and sends 6-digit OTP via SMS
+    """
+    cursor = await db.execute(
+        "SELECT id, phone, email, email_verified, role, tenant_id FROM users WHERE phone = ?",
+        (req.phone,),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(404, "Phone number not registered")
+
+    otp = await create_and_send_sms_otp(req.phone, "login")
+    if not otp:
+        raise HTTPException(500, "Failed to send OTP. Check SMS configuration.")
+
+    return {"success": True, "message": f"OTP sent to {req.phone}", "expires_in_minutes": 10}
+
+
+@router.post("/verify-login-otp", response_model=TokenResp)
+async def verify_login_otp(req: VerifyLoginOtpReq, db=Depends(get_db)):
+    """
+    Verify OTP and return JWT token for passwordless login.
+    - Validates OTP against stored value
+    - Returns JWT token on successful verification
+    """
+    valid = await verify_sms_otp(req.phone, req.otp, "login")
+    if not valid:
+        raise HTTPException(401, "Invalid or expired OTP")
+
+    # Fetch user details
+    cursor = await db.execute(
+        "SELECT id, phone, email, email_verified, role, tenant_id FROM users WHERE phone = ?",
+        (req.phone,),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(404, "User not found")
+
+    user_id = row["id"]
+    tenant_id = row["tenant_id"]
+    role = row["role"]
+    phone = row["phone"]
+    email = row["email"]
+    email_verified = bool(row["email_verified"])
+
+    token = create_jwt(user_id, tenant_id, role, phone, email=email, email_verified=email_verified)
+    return TokenResp(
+        token=token,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        role=role,
+        phone=phone,
+        email=email,
+        email_verified=email_verified,
+    )
 
 
 @router.get("/me", response_model=UserResp)

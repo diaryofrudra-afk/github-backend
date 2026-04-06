@@ -52,9 +52,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     mode: isProxy ? undefined : 'cors',
   });
   if (res.status === 401) {
-    clearToken();
-    window.location.reload();
-    throw new Error('Session expired');
+    // Don't clear token for auth endpoints (login, verify-otp, register)
+    const authEndpoints = ['/auth/login', '/auth/verify-login-otp', '/auth/register', '/sms-otp/send', '/sms-otp/verify'];
+    const isAuthEndpoint = authEndpoints.some(ep => path.includes(ep));
+    if (!isAuthEndpoint) {
+      clearToken();
+      window.location.reload();
+      throw new Error('Session expired');
+    }
   }
   if (!res.ok) {
     const text = await res.text();
@@ -412,5 +417,16 @@ export const api = {
   },
   verifySmsOtp(phone: string, otp: string, purpose?: string): Promise<{ success: boolean; message: string; phone?: string; purpose?: string }> {
     return request('POST', '/sms-otp/verify', { phone, otp, purpose: purpose || 'registration' });
+  },
+
+  // OTP Login
+  sendLoginOtp(phone: string): Promise<{ success: boolean; message: string; expires_in_minutes: number }> {
+    return request('POST', '/auth/login-with-otp', { phone });
+  },
+  verifyLoginOtp(phone: string, otp: string): Promise<AuthResponse> {
+    return request('POST', '/auth/verify-login-otp', { phone, otp });
+  },
+  registerWithOtp(phone: string, name: string, email: string, otp: string): Promise<AuthResponse> {
+    return request('POST', '/auth/register-with-otp', { phone, name, email, otp });
   },
 };

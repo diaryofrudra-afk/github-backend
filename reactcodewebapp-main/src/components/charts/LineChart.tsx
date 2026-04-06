@@ -44,6 +44,9 @@ export function LineChart({ data, options, height, gradient = false }: LineChart
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
+    layout: {
+      padding: 0,
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -76,8 +79,15 @@ export function LineChart({ data, options, height, gradient = false }: LineChart
           color: tickColor,
           font: { size: 9 },
           padding: 8,
+          callback: (value: number) => {
+            if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+            if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+            if (value >= 1000) return `₹${(value / 1000).toFixed(0)}K`;
+            return `₹${value}`;
+          },
         },
         border: { display: false },
+        beginAtZero: true,
       },
     },
     elements: {

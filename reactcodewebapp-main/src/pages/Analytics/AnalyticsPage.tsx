@@ -292,13 +292,13 @@ export function AnalyticsPage({ active }: { active: boolean }) {
         {/* Fleet Revenue */}
         <div className="kpi-card">
           <div className="kpi-top">
-            <div className="kpi-icon" style={{ 
-              background: 'var(--accent-s)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              fontSize: '15px', 
-              fontWeight: '700', 
+            <div className="kpi-icon" style={{
+              background: 'var(--accent-s)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '15px',
+              fontWeight: '700',
               color: 'var(--accent)',
               fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>

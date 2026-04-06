@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { BlackbuckData } from '../types';
 import { useBlackbuck } from '../hooks/useBlackbuck';
@@ -8,18 +8,22 @@ interface DataContextValue {
   blackbuckLoading: boolean;
   blackbuckError: string | null;
   refetchBlackbuck: () => void;
+  setGpsActive: (active: boolean) => void;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { data, loading, error, refetch } = useBlackbuck();
+  // Default: not active (will be overridden by GPS page)
+  const [active, setActive] = useState(false);
+  const { data, loading, error, refetch } = useBlackbuck(active);
   return (
     <DataContext.Provider value={{
       blackbuck: data,
       blackbuckLoading: loading,
       blackbuckError: error,
       refetchBlackbuck: refetch,
+      setGpsActive: setActive,
     }}>
       {children}
     </DataContext.Provider>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from './context/AppContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { MobileDrawer } from './components/layout/MobileDrawer';
@@ -24,26 +24,37 @@ import { toISO } from './utils';
 import type { AppState } from './types';
 
 export default function App() {
-  const { activePage, setActivePage, sidebarCollapsed, user, setUser, userRole, setUserRole, setState } = useApp();
+  const { activePage, setActivePage, sidebarCollapsed, user, setUser, userRole, setUserRole, setState, clearUserData } = useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Login / register form state
+  // Auth form state
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpRequested, setOtpRequested] = useState(false);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<Date | null>(null);
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
-
-  // Show/hide password
-  const [showPassword, setShowPassword] = useState(false);
+  const otpRequestRef = useRef(false);
 
   function loadDataFromAPI() {
+    // Reset to empty state first — never show stale data
+    setState(() => ({
+      cranes: [], operators: [], operatorProfiles: {},
+      ownerProfile: { name: '', roleTitle: '', phone: '', email: '', company: '', city: '', state: '', gst: '', website: '', defaultLimit: '8' },
+      fuelLogs: {}, cameras: [], integrations: { fuel: {}, cameras: {} },
+      advancePayments: {}, diagnostics: {}, clients: [],
+      invoices: [], payments: [], creditNotes: [],
+      quotations: [], proformas: [], challans: [],
+      files: {}, timesheets: {}, compliance: {},
+      attendance: [], maintenance: {}, notifications: [], opNotifications: {},
+    }));
     api.exportAll()
       .then((data: AppState) => {
         const raw = data as unknown as Record<string, unknown>;
-        // Map snake_case API fields to camelCase frontend fields
         const cranes = ((raw.cranes || []) as Record<string, unknown>[]).map(c => ({
           id: c.id, reg: c.reg, type: c.type, make: c.make, model: c.model,
           capacity: c.capacity, year: c.year, rate: c.rate,
@@ -51,11 +62,9 @@ export default function App() {
           operator: c.operator, site: c.site, status: c.status, notes: c.notes,
         }));
 
-        // Map timesheets: API returns flat array, frontend expects Record<operatorKey, entries[]>
         const tsRaw = raw.timesheets as Record<string, unknown[]> | unknown[] | undefined;
         let timesheets: Record<string, unknown[]> = {};
         if (Array.isArray(tsRaw)) {
-          // flat array from GET /timesheets
           (tsRaw as Record<string, unknown>[]).forEach((t) => {
             const key = (t.operator_key || t.operatorKey || '') as string;
             if (!timesheets[key]) timesheets[key] = [];
@@ -69,7 +78,6 @@ export default function App() {
             });
           });
         } else if (tsRaw && typeof tsRaw === 'object') {
-          // already keyed by operator
           for (const [key, entries] of Object.entries(tsRaw)) {
             timesheets[key] = ((entries || []) as Record<string, unknown>[]).map(t => ({
               id: t.id, date: toISO((t.date || '') as string),
@@ -125,25 +133,72 @@ export default function App() {
   }, []);
 
   function handleSignOut() {
-    clearToken();
-    setUser(null);
-    setUserRole(null);
+    clearUserData();
+  }
+
+  function startOtpTimer(expiresInMinutes: number) {
+    const expiry = new Date(Date.now() + expiresInMinutes * 60_000);
+    setOtpExpiresAt(expiry);
+    setOtpSecondsLeft(expiresInMinutes * 60);
+    const interval = setInterval(() => {
+      setOtpSecondsLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return interval;
+  }
+
+  async function handleRequestOtp() {
+    if (otpRequestRef.current || otpSecondsLeft > 0) return;
+    otpRequestRef.current = true;
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const purpose = mode === 'register' ? 'registration' : 'login';
+      const resp = await api.sendSmsOtp(phone, purpose);
+      setOtpRequested(true);
+      const mins = resp.expires_in_minutes || 10;
+      startOtpTimer(mins);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Failed to send OTP');
+    } finally {
+      setAuthLoading(false);
+      otpRequestRef.current = false;
+    }
   }
 
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setAuthError('');
+
+    // Step 1: Request OTP
+    if (!otpRequested) {
+      await handleRequestOtp();
+      return;
+    }
+
+    // Step 2: Verify OTP and login/register
     setAuthLoading(true);
     try {
-      if (mode === 'login') {
-        const res = await api.login(phone, password, email || undefined);
+      if (mode === 'register') {
+        // Register with OTP (single endpoint verifies OTP + creates user)
+        const res = await api.registerWithOtp(phone, name, email, otp);
+        // Clear any stale data before loading new user's data
+        clearUserData();
         setToken(res.token);
         setUser(res.phone);
         setUserRole(res.role);
-        setActivePage(res.role === 'operator' ? 'logger' : 'fleet');
+        setActivePage('fleet');
         loadDataFromAPI();
-      } else if (mode === 'register') {
-        const res = await api.register(phone, password, 'owner', companyName, undefined, email || undefined);
+      } else {
+        // Login: verify OTP and get token
+        const res = await api.verifyLoginOtp(phone, otp);
+        // Clear any stale data before loading new user's data
+        clearUserData();
         setToken(res.token);
         setUser(res.phone);
         setUserRole(res.role);
@@ -156,6 +211,29 @@ export default function App() {
       setAuthLoading(false);
     }
   }
+
+  function resetForm() {
+    setAuthError('');
+    setOtpRequested(false);
+    setOtp('');
+    setOtpExpiresAt(null);
+    setOtpSecondsLeft(0);
+    otpRequestRef.current = false;
+  }
+
+  // ── Styles ──
+  const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+    padding: '10px 14px',
+    background: 'var(--bg3)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    color: 'var(--t1)',
+    fontSize: '14px',
+    outline: 'none',
+    boxSizing: 'border-box',
+    width: '100%',
+    ...extra,
+  });
 
   if (!user) {
     return (
@@ -173,25 +251,26 @@ export default function App() {
           borderRadius: '16px',
           padding: '40px',
           width: '100%',
-          maxWidth: '400px',
+          maxWidth: '420px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
+          gap: '14px',
         }}>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--fh)' }}>
+          {/* Logo & subtitle */}
+          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--fh)', letterSpacing: '-0.5px' }}>
             Suprwise
           </div>
           <div style={{ fontSize: '13px', color: 'var(--t3)' }}>
             {mode === 'login' ? 'Sign in to your account' : 'Create a new account'}
           </div>
 
-          {/* Mode toggle buttons */}
+          {/* Mode toggle */}
           <div style={{ display: 'flex', gap: '8px' }}>
             {(['login', 'register'] as const).map(m => (
               <button
                 key={m}
                 type="button"
-                onClick={() => { setMode(m); setAuthError(''); }}
+                onClick={() => { setMode(m); resetForm(); }}
                 style={{
                   flex: 1,
                   padding: '8px',
@@ -202,6 +281,7 @@ export default function App() {
                   fontWeight: 600,
                   fontSize: '12px',
                   cursor: 'pointer',
+                  transition: 'all 0.2s',
                 }}
               >
                 {m === 'login' ? 'Login' : 'Register'}
@@ -209,101 +289,93 @@ export default function App() {
             ))}
           </div>
 
-          {/* Phone input */}
-          <input
-            type="tel"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="Phone number"
-            required
-            style={{
-              padding: '10px 14px',
-              background: 'var(--bg3)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              color: 'var(--t1)',
-              fontSize: '14px',
-              outline: 'none',
-            }}
-            autoFocus
-          />
+          {/* Register fields */}
+          {mode === 'register' && (
+            <>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Full name"
+                required
+                style={inputStyle()}
+                autoFocus
+              />
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="Email address"
+                required
+                style={inputStyle()}
+              />
+            </>
+          )}
 
-          {/* Email input */}
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="Email address"
-            required={mode === 'register'}
-            style={{
-              padding: '10px 14px',
-              background: 'var(--bg3)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              color: 'var(--t1)',
-              fontSize: '14px',
-              outline: 'none',
-            }}
-          />
-
-          {/* Password input with show/hide toggle */}
-          <div style={{ position: 'relative' }}>
+          {/* Phone (always shown) */}
+          {mode === 'login' && (
             <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Password"
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="Phone number"
               required
-              style={{
-                width: '100%',
-                padding: '10px 40px 10px 14px',
-                background: 'var(--bg3)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                color: 'var(--t1)',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              style={inputStyle()}
+              autoFocus={!otpRequested}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                fontSize: '16px',
-                color: 'var(--t3)',
-              }}
-              title={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? '🙈' : '👁️'}
-            </button>
-          </div>
-
-          {/* Company name (register only) */}
+          )}
           {mode === 'register' && (
             <input
-              type="text"
-              value={companyName}
-              onChange={e => setCompanyName(e.target.value)}
-              placeholder="Company name (optional)"
-              style={{
-                padding: '10px 14px',
-                background: 'var(--bg3)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                color: 'var(--t1)',
-                fontSize: '14px',
-                outline: 'none',
-              }}
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="Phone number"
+              required
+              style={inputStyle()}
+              disabled={otpRequested}
             />
+          )}
+
+          {/* OTP input (appears after requesting) */}
+          {otpRequested && (
+            <input
+              type="text"
+              value={otp}
+              onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="Enter 6-digit OTP"
+              required
+              maxLength={6}
+              style={inputStyle({
+                fontSize: '20px',
+                fontWeight: 700,
+                letterSpacing: '10px',
+                textAlign: 'center',
+                fontFamily: 'monospace',
+              })}
+              autoFocus
+            />
+          )}
+
+          {/* Resend link */}
+          {otpRequested && (
+            <button
+              type="button"
+              onClick={handleRequestOtp}
+              disabled={otpSecondsLeft > 0 || authLoading}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: otpSecondsLeft > 0 ? 'var(--t3)' : 'var(--accent)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: otpSecondsLeft > 0 ? 'not-allowed' : 'pointer',
+                textAlign: 'right',
+                alignSelf: 'flex-end',
+                padding: '0',
+              }}
+            >
+              {otpSecondsLeft > 0 ? `Valid for ${Math.floor(otpSecondsLeft / 60)}m ${otpSecondsLeft % 60}s` : 'Resend OTP'}
+            </button>
           )}
 
           {/* Error message */}
@@ -311,9 +383,10 @@ export default function App() {
             <div style={{
               fontSize: '13px',
               color: 'var(--error, #e53e3e)',
-              padding: '8px 12px',
-              background: 'var(--bg3)',
-              borderRadius: '6px',
+              padding: '10px 12px',
+              background: 'rgba(229, 62, 62, 0.08)',
+              border: '1px solid rgba(229, 62, 62, 0.2)',
+              borderRadius: '8px',
             }}>
               {authError}
             </div>
@@ -324,18 +397,28 @@ export default function App() {
             type="submit"
             disabled={authLoading}
             style={{
-              padding: '10px',
+              padding: '12px',
               background: 'var(--accent)',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '14px',
               cursor: authLoading ? 'not-allowed' : 'pointer',
               opacity: authLoading ? 0.7 : 1,
+              marginTop: '4px',
+              letterSpacing: '0.3px',
             }}
           >
-            {authLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            {authLoading
+              ? otpRequested
+                ? 'Verifying...'
+                : 'Sending OTP...'
+              : !otpRequested
+                ? 'Request OTP'
+                : mode === 'login'
+                  ? 'Sign In'
+                  : 'Create Account'}
           </button>
 
         </form>
@@ -343,6 +426,7 @@ export default function App() {
     );
   }
 
+  // ── Authenticated ──
   return (
     <div id="app-shell" className={`visible${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <div className="body-split">

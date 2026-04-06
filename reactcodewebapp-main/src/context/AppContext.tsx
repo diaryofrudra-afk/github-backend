@@ -25,6 +25,7 @@ interface AppContextValue {
   state: AppState;
   setState: (updater: (prev: AppState) => AppState) => void;
   save: () => void;
+  clearUserData: () => void;
   toasts: Toast[];
   showToast: (msg: string, type?: Toast['type']) => void;
   settingsOpen: boolean;
@@ -66,6 +67,51 @@ function loadInitialState(): AppState {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+// All localStorage keys that store user data — used for clearing on sign-out
+const DATA_KEYS: (keyof AppState)[] = [
+  'cranes', 'operators', 'operatorProfiles', 'ownerProfile',
+  'fuelLogs', 'cameras', 'integrations', 'advancePayments',
+  'diagnostics', 'clients', 'invoices', 'payments', 'creditNotes',
+  'quotations', 'proformas', 'challans', 'files', 'timesheets',
+  'compliance', 'attendance', 'maintenance', 'notifications', 'opNotifications',
+];
+
+export function clearAllUserData(): void {
+  DATA_KEYS.forEach(key => {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  });
+  // Also clear auth
+  try { localStorage.removeItem('suprwise_token'); } catch { /* ignore */ }
+}
+
+function emptyState(): AppState {
+  return {
+    cranes: [],
+    operators: [],
+    operatorProfiles: {},
+    ownerProfile: { ...defaultOwnerProfile },
+    fuelLogs: {},
+    cameras: [],
+    integrations: { fuel: {}, cameras: {} },
+    advancePayments: {},
+    diagnostics: {},
+    clients: [],
+    invoices: [],
+    payments: [],
+    creditNotes: [],
+    quotations: [],
+    proformas: [],
+    challans: [],
+    files: {},
+    timesheets: {},
+    compliance: {},
+    attendance: [],
+    maintenance: {},
+    notifications: [],
+    opNotifications: {},
+  };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [activePage, setActivePageState] = useState<PageId>(() => {
     const role = localStorage.getItem('rudra_user_role');
@@ -79,7 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRoleState] = useState<string | null>(
     () => localStorage.getItem('rudra_user_role')
   );
-  const [appState, setAppState] = useState<AppState>(loadInitialState);
+  const [appState, setAppState] = useState<AppState>(emptyState);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -112,6 +158,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   }, []);
 
+  const clearUserData = useCallback(() => {
+    clearAllUserData();
+    setAppState(emptyState());
+    setUserState(null);
+    setUserRoleState(null);
+    localStorage.removeItem('rudra_user');
+    localStorage.removeItem('rudra_user_role');
+  }, []);
+
   return (
     <AppContext.Provider value={{
       activePage, setActivePage: setActivePageState,
@@ -119,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sidebarCollapsed: collapsed, toggleSidebar,
       user, setUser,
       userRole, setUserRole,
-      state: appState, setState: setAppState, save,
+      state: appState, setState: setAppState, save, clearUserData,
       toasts, showToast,
       settingsOpen, setSettingsOpen,
     }}>

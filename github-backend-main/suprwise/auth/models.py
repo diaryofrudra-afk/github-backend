@@ -40,3 +40,19 @@ class UserResp(BaseModel):
     email_verified: bool = False
 
 
+class SendLoginOtpReq(BaseModel):
+    phone: str
+
+
+class VerifyLoginOtpReq(BaseModel):
+    phone: str
+    otp: str
+
+
+class RegisterWithOtpReq(BaseModel):
+    phone: str
+    name: str
+    email: str = ""
+    otp: str
+
+

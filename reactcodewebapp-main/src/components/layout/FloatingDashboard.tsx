@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useData } from '../../context/DataContext';
 import { fmtINR, calcBill } from '../../utils';
 import type { TimesheetEntry } from '../../types';
 
 export function FloatingDashboard() {
   const { state, userRole } = useApp();
+  const { blackbuck } = useData();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const stats = useMemo(() => {
@@ -24,8 +26,13 @@ export function FloatingDashboard() {
     const deployed = state.cranes.filter(c => c.operator).length;
     const utilPct = state.cranes.length ? Math.round((deployed / state.cranes.length) * 100) : 0;
 
-    return { totalRev, deployed, total: state.cranes.length, utilPct };
-  }, [state, userRole]);
+    // Sync with GPS engine count
+    const gpsVehicles = blackbuck?.vehicles || [];
+    const engineOn = gpsVehicles.filter(v => v.engine_on === true).length;
+    const totalVehicles = gpsVehicles.length || state.cranes.length;
+
+    return { totalRev, deployed, total: state.cranes.length, utilPct, engineOn, totalVehicles };
+  }, [state, userRole, blackbuck]);
 
   if (!stats) return null;
 
@@ -53,7 +60,7 @@ export function FloatingDashboard() {
       <div className="fd-divider" />
       <div className="fd-item">
         <span className="fd-label">Active Fleet</span>
-        <span className="fd-value green">{stats.deployed}/{stats.total}</span>
+        <span className="fd-value green">{stats.engineOn}/{stats.totalVehicles}</span>
       </div>
     </div>
   );

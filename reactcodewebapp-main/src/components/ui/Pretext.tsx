@@ -86,10 +86,25 @@ export const Pretext: React.FC<PretextProps> = ({
     return { lines: layoutLines, balancedWidth: targetWidth };
   }, [preparedWithSegments, containerWidth, lineHeight, balanced]);
 
-  // Fallback to standard rendering if pretext fails or not ready
+  // Fallback to standard rendering if pretext fails or not ready.
+  // The key forces React to re-mount this element once the pretext engine
+  // is ready, ensuring a clean swap from native text to layout-driven text.
   if (!preparedWithSegments || containerWidth <= 0) {
     return (
-      <div ref={containerRef} className={className} style={{ ...style, ...parseFont(font), lineHeight: `${lineHeight}px` }}>
+      <div
+        key="pretext-fallback"
+        ref={containerRef}
+        className={className}
+        style={{
+          ...style,
+          ...parseFont(font),
+          lineHeight: `${lineHeight}px`,
+          // Ensure the fallback looks correct even before pretext takes over
+          fontFeatureSettings: '"liga" 1, "calt" 1',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+        }}
+      >
         {text}
       </div>
     );
@@ -110,6 +125,9 @@ export const Pretext: React.FC<PretextProps> = ({
         lineHeight: `${lineHeight}px`,
         width: balanced ? `${balancedWidth}px` : '100%',
         display: balanced ? 'inline-block' : 'block',
+        fontFeatureSettings: '"liga" 1, "calt" 1',
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
       }}
     >
       {lines.map((line: any, i: number) => (

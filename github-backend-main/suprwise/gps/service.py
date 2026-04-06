@@ -1,80 +1,145 @@
+"""
+Blackbuck GPS telemetry integration — pure HTTP API.
+No Playwright, no browser dependencies – uses persistent httpx client.
+Per-user credentials, encrypted at rest.
+Mock data fallback when no credentials are provided.
+"""
 from __future__ import annotations
 
-import random
+import json
+import asyncio
+import httpx
 from datetime import datetime
-from typing import List
+from typing import List, Optional, Dict
+from pathlib import Path
 
 from ..config import settings
+from ..database import get_db
 from .models import BlackbuckData, BlackbuckVehicle
+from .crypto import decrypt_token
 
-# Track mock state globally for "simulated" live movement
-_mock_state = {
-    "OD02AY8703": {"lat": 20.2961, "lon": 85.8245, "speed": 42.5},
-    "MH02CL0555": {"lat": 19.0760, "lon": 72.8777, "speed": 0.0},
-}
+_credentials_cache: Dict[str, dict] = {}
+
+
+async def _get_user_credentials(user_id: str) -> Optional[dict]:
+    """Resolve credentials: cache → DB per-user only. NO shared fallback."""
+    if user_id in _credentials_cache:
+        return _credentials_cache[user_id]
+    try:
+        db = await get_db()
+        cursor = await db.execute(
+            "SELECT auth_token_encrypted, fleet_owner_id FROM blackbuck_credentials WHERE user_id = ?",
+            (user_id,),
+        )
+        row = await cursor.fetchone()
+        if row:
+            token = decrypt_token(row[0])
+            creds = {"auth_token": token, "fleet_owner_id": row[1]}
+            _credentials_cache[user_id] = creds
+            return creds
+    except Exception:
+        pass
+
+    # No per-user credentials — return None (do NOT fall back to shared .env)
+    return None
+
+
+def clear_credentials_cache(user_id: Optional[str] = None):
+    if user_id:
+        _credentials_cache.pop(user_id, None)
+    else:
+        _credentials_cache.clear()
+
+
+def _build_headers(token: str) -> dict:
+    """Build headers with auth token for Blackbuck API."""
+    return {
+        "Accept": "application/json, text/plain, */*",
+        "Authorization": f"Bearer {token}",
+        "Origin": "https://boss.blackbuck.com",
+        "Referer": "https://boss.blackbuck.com/gps",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    }
+
+
+def _map_vehicle(raw: dict) -> BlackbuckVehicle:
+    status_raw = raw.get("status", "UNKNOWN").upper()
+    status = {
+        "STOPPED": "stopped", "MOVING": "moving",
+        "SIGNAL_LOST": "signal_lost", "WIRE_DISCONNECTED": "wire_disconnected",
+    }.get(status_raw, "unknown")
+
+    ts = raw.get("last_updated_on")
+    if ts:
+        try:
+            last_updated = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            last_updated = raw.get("last_updated_on_format", "")
+    else:
+        last_updated = raw.get("last_updated_on_format", "")
+
+    ign = raw.get("ignition_status", "").upper()
+    engine_on = True if ign == "ON" else (False if ign == "OFF" else None)
+
+    return BlackbuckVehicle(
+        registration_number=raw.get("truck_no", ""),
+        status=status,
+        latitude=float(raw.get("latitude", 0.0) or 0.0),
+        longitude=float(raw.get("longitude", 0.0) or 0.0),
+        speed=float(raw.get("current_speed", 0.0) or 0.0),
+        last_updated=last_updated,
+        engine_on=engine_on,
+        ignition_status=raw.get("ignition_status", "unknown"),
+        ignition_lock=raw.get("ignition_lock_status"),
+        signal=raw.get("signal", "unknown").replace("_", " ").title(),
+        address=raw.get("address", ""),
+    )
+
 
 def _mock_blackbuck_data() -> BlackbuckData:
-    """Mock telemetry with simulated live movement."""
-    vehicles = []
-    for reg, state in _mock_state.items():
-        # Add slight random drift for "live" effect
-        if state["speed"] > 0:
-            state["lat"] += (random.random() - 0.5) * 0.0001
-            state["lon"] += (random.random() - 0.5) * 0.0001
-            state["speed"] = max(35.0, min(80.0, state["speed"] + (random.random() - 0.5) * 2))
-        
-        vehicles.append(
-            BlackbuckVehicle(
-                registration_number=reg,
-                status="moving" if state["speed"] > 0 else "stopped",
-                latitude=state["lat"],
-                longitude=state["lon"],
-                speed=state["speed"],
-                last_updated=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            )
-        )
-    return BlackbuckData(vehicles=vehicles)
+    """No credentials configured — return error prompting user to sign in."""
+    return BlackbuckData(
+        error="No Blackbuck credentials configured. Please sign in with your GPS account in GPS Settings to view live tracking data."
+    )
 
 
-async def fetch_blackbuck_telemetry() -> BlackbuckData:
+async def fetch_blackbuck_telemetry(user_id: Optional[str] = None) -> BlackbuckData:
     """
-    Fetch live telemetry from fleet.blackbuck.com using a headless browser.
+    Fetch live GPS data from Blackbuck.
+    Uses per-user credentials only — no shared .env fallback.
+    Falls back to mock data if no credentials configured.
     """
-    if not settings.BLACKBUCK_USERNAME or not settings.BLACKBUCK_PASSWORD:
-        # If no credentials, use mock but with simulated movement
+    creds = None
+    if user_id:
+        creds = await _get_user_credentials(user_id)
+    # No per-user credentials — return mock data for dev
+    if not creds or not creds.get("auth_token"):
         return _mock_blackbuck_data()
 
-    # REAL LIVE SCRAPING LOGIC
+    token = creds["auth_token"]
+    fleet_id = creds["fleet_owner_id"]
+    url = f"https://api-fms.blackbuck.com/fmsiot/api/v2/gps/tracking/details?fleet_owner_id={fleet_id}&status=All&truck_no=&map_view=true"
+
     try:
-        from playwright.async_api import async_playwright
-        async with async_playwright() as p:
-            # Launching in headless=True for performance, set False to debug
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-            )
-            page = await context.new_page()
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(url, headers=_build_headers(token))
             
-            # 1. Login
-            await page.goto("https://fleet.blackbuck.com/login", timeout=60000)
-            await page.fill('input[type="text"]', settings.BLACKBUCK_USERNAME)
-            await page.click('button[type="submit"]') # Assuming this triggers password or OTP
+            if resp.status_code == 401:
+                return BlackbuckData(error="Blackbuck token expired. Please update it in GPS Settings.")
             
-            # NOTE: Blackbuck often uses OTP sent to the phone. 
-            # If an OTP is required, the automation would pause here.
-            # For password-only, we would do:
-            # await page.fill('input[type="password"]', settings.BLACKBUCK_PASSWORD)
-            # await page.click('button[type="submit"]')
+            if resp.status_code != 200:
+                return BlackbuckData(error=f"Blackbuck API error: {resp.status_code}")
+
+            data = resp.json()
+            raw_list = data.get("list", data.get("data", []))
             
-            # 2. Extract Data (Example selector)
-            # await page.wait_for_selector(".vehicle-list-item")
-            # This is where we'd parse the table/list for coordinates
-            
-            await browser.close()
-            
-            # Fallback to mock if scraping fails/incomplete
-            return _mock_blackbuck_data()
-            
+            if not raw_list:
+                return BlackbuckData(error="No vehicles found in Blackbuck account.")
+
+            vehicles = [_map_vehicle(v) for v in raw_list if v.get("truck_no")]
+            return BlackbuckData(vehicles=vehicles)
+
+    except httpx.TimeoutException:
+        return BlackbuckData(error="Connection to Blackbuck timed out.")
     except Exception as e:
-        print(f"Playwright error: {e}")
-        return BlackbuckData(error=f"Live fetch failed: {str(e)}")
+        return BlackbuckData(error=f"GPS fetch failed: {str(e)}")

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { BlackbuckData } from '../types';
 import { getToken } from '../services/api';
 
-export function useBlackbuck() {
+export function useBlackbuck(activePage?: boolean) {
   const [data, setData] = useState<BlackbuckData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +19,11 @@ export function useBlackbuck() {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
+      if (d.error) {
+        setError(d.error);
+      } else {
+        setError(null);
+      }
       setData(d);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Fetch failed');
@@ -27,19 +32,20 @@ export function useBlackbuck() {
     }
   }, []);
 
+  // Always fetch GPS data on mount (not just when GPS page is active)
+  // This ensures the floating dashboard can access engine counts
   useEffect(() => {
     fetch_();
   }, [fetch_]);
 
+  // WebSocket: connect when GPS page is active, otherwise just HTTP poll
   useEffect(() => {
+    if (!activePage) return;
     const token = getToken();
     if (!token) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    // We send the token as a query parameter for WebSocket auth if the backend supports it,
-    // or just rely on the session/cookie if applicable.
-    // Given the instructions, I'll just use the URL provided.
     const wsUrl = `${protocol}//${host}/api/gps/ws/blackbuck?token=${encodeURIComponent(token)}`;
 
     let ws: WebSocket;
@@ -51,7 +57,13 @@ export function useBlackbuck() {
       ws.onmessage = (event) => {
         try {
           const update = JSON.parse(event.data);
-          setData(update);
+          // Only update data if no error, otherwise keep existing vehicles
+          if (update.error) {
+            setError(update.error);
+          } else {
+            setError(null);
+            setData(update);
+          }
         } catch (e) {
           console.error('[WS] Failed to parse message:', e);
         }
@@ -80,7 +92,7 @@ export function useBlackbuck() {
       if (ws) ws.close(1000);
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, []);
+  }, [activePage]);
 
   return { data, loading, error, refetch: fetch_ };
 }

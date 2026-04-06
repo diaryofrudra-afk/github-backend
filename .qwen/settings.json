@@ -8,7 +8,11 @@
       "Bash(npm start)",
       "Bash(curl *)",
       "Bash(uvicorn *)",
-      "Bash(lsof *)"
+      "Bash(lsof *)",
+      "Bash(nohup *)",
+      "Bash(xargs *)",
+      "Bash(tail *)",
+      "Bash(grep *)"
     ]
   },
   "$version": 3

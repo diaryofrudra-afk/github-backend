@@ -1,3 +1,4 @@
+import { useData } from '../../context/DataContext';
 import { fmtINR, fmtHours, calcBill, fmtDate } from '../../utils';
 import type { Crane, TimesheetEntry } from '../../types';
 
@@ -17,11 +18,17 @@ function getAccHrs(entries: TimesheetEntry[], date: string, startTime: string): 
 }
 
 export function VehicleCard({ crane, timesheets, operatorName, alerts, onAssign, onDelete }: VehicleCardProps) {
+  const { blackbuck } = useData();
   const op = crane.operator;
   const opLabel = operatorName ? `${operatorName} · ${op}` : op;
   const specsLine = crane.make
     ? [crane.year, crane.make, crane.model, crane.capacity].filter(Boolean).join(' · ')
     : '';
+
+  // Match with GPS telemetry (Normalized registration search)
+  const gpsMatch = blackbuck?.vehicles.find(v => 
+    v.registration_number.replace(/\s/g, '').toUpperCase() === crane.reg.replace(/\s/g, '').toUpperCase()
+  );
 
   let grandTotal = 0;
   timesheets.forEach(e => {
@@ -48,9 +55,14 @@ export function VehicleCard({ crane, timesheets, operatorName, alerts, onAssign,
       </div>
 
       <div className="crane-mid">
-        <span className={`op-pill ${op ? 'on' : 'off'}`}>
-          <span className="op-dot"></span>
-          {op ? opLabel : 'Standby'}
+        <span className={`op-pill ${gpsMatch ? (gpsMatch.engine_on ? 'on' : 'off') : (op ? 'on' : 'off')}`}>
+          <span className={`op-dot ${gpsMatch?.engine_on ? 'pulse' : ''}`}></span>
+          {gpsMatch ? (
+             <span>
+               Engine {gpsMatch.engine_on ? 'ON' : 'OFF'}
+               {op ? <span style={{ opacity: 0.6, fontSize: '0.9em' }}> · {operatorName || op}</span> : null}
+             </span>
+          ) : (op ? opLabel : 'Standby')}
         </span>
         <div className="crane-actions">
           {!op && (
