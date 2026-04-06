@@ -1,11 +1,14 @@
 import re
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from ..database import get_db
-from .models import RegisterReq, LoginReq, ChangePasswordReq, TokenResp, UserResp, SendLoginOtpReq, VerifyLoginOtpReq, RegisterWithOtpReq
+from .models import RegisterReq, LoginReq, ChangePasswordReq, TokenResp, UserResp, SendLoginOtpReq, VerifyLoginOtpReq, RegisterWithOtpReq, GoogleAuthReq
 from .service import hash_password, verify_password, create_jwt
 from .dependencies import get_current_user
 from ..sms_otp.service import create_and_send_sms_otp, verify_sms_otp
+from ..config import settings
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -289,5 +292,106 @@ async def me(user=Depends(get_current_user)):
         email=user.get("email", ""),
         email_verified=bool(user.get("email_verified", 0)),
     )
+
+
+@router.post("/google", response_model=TokenResp)
+async def google_auth(req: GoogleAuthReq, db=Depends(get_db)):
+    """
+    Google OAuth login/registration.
+    - Verifies Google ID token
+    - If email exists, logs in user (no OTP required)
+    - If email doesn't exist, creates new owner account
+    - Returns JWT token
+    """
+    try:
+        # Verify Google ID token
+        idinfo = id_token.verify_oauth2_token(
+            req.credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID
+        )
+        
+        google_email = idinfo.get("email", "")
+        google_name = idinfo.get("name", "")
+        google_picture = idinfo.get("picture", "")
+        email_verified = idinfo.get("email_verified", False)
+        
+        if not google_email:
+            raise HTTPException(400, "Email not provided by Google")
+        
+        # Check if user exists by email
+        cursor = await db.execute(
+            "SELECT id, phone, email, email_verified, password_hash, role, tenant_id FROM users WHERE email = ?",
+            (google_email,),
+        )
+        existing_user = await cursor.fetchone()
+        
+        if existing_user:
+            # User exists - log them in (no OTP required)
+            user_id = existing_user["id"]
+            tenant_id = existing_user["tenant_id"]
+            role = existing_user["role"]
+            phone = existing_user["phone"] or ""
+            email_verified_db = bool(existing_user["email_verified"])
+            
+            # Update email_verified if not already
+            if email_verified and not email_verified_db:
+                await db.execute(
+                    "UPDATE users SET email_verified = 1 WHERE id = ?",
+                    (user_id,),
+                )
+                await db.commit()
+            
+            token = create_jwt(
+                user_id, tenant_id, role, phone,
+                email=google_email,
+                email_verified=email_verified or email_verified_db
+            )
+            return TokenResp(
+                token=token,
+                user_id=user_id,
+                tenant_id=tenant_id,
+                role=role,
+                phone=phone,
+                email=google_email,
+                email_verified=email_verified or email_verified_db,
+            )
+        else:
+            # New user - create owner account
+            tenant_id = str(uuid.uuid4())
+            await db.execute(
+                "INSERT INTO tenants (id, name) VALUES (?, ?)",
+                (tenant_id, google_name or "My Fleet"),
+            )
+            user_id = str(uuid.uuid4())
+            await db.execute(
+                "INSERT INTO users (id, phone, email, email_verified, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, "", google_email, 1 if email_verified else 0, "", "owner", tenant_id),
+            )
+            profile_id = str(uuid.uuid4())
+            await db.execute(
+                "INSERT INTO owner_profiles (id, user_id, tenant_id, company) VALUES (?, ?, ?, ?)",
+                (profile_id, user_id, tenant_id, google_name or ""),
+            )
+            await db.commit()
+            
+            token = create_jwt(
+                user_id, tenant_id, "owner", "",
+                email=google_email,
+                email_verified=email_verified
+            )
+            return TokenResp(
+                token=token,
+                user_id=user_id,
+                tenant_id=tenant_id,
+                role="owner",
+                phone="",
+                email=google_email,
+                email_verified=email_verified,
+            )
+    except ValueError as e:
+        raise HTTPException(401, f"Invalid Google token: {str(e)}")
+    except Exception as e:
+        raise HTTPException(500, f"Google authentication failed: {str(e)}")
 
 

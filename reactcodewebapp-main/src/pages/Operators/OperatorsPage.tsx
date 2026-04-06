@@ -40,9 +40,9 @@ export function OperatorsPage({ active }: { active: boolean }) {
         .then(p => {
           if (p.photo) setOpPhotos(prev => ({ ...prev, [op.id]: p.photo }));
         })
-        .catch(() => {});
+        .catch(() => { });
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, state.operators.length]);
 
   const filtered = useMemo(() => {
@@ -95,10 +95,10 @@ export function OperatorsPage({ active }: { active: boolean }) {
           await api.updateOperatorProfile(editId, { photo: editPhoto });
           setOpPhotos(prev => ({ ...prev, [editId]: editPhoto }));
         }
-        
+
         const salaryNum = Number(form.salary) || 0;
         const wdNum = Number(form.workingDays) || 26;
-        
+
         setState(prev => ({
           ...prev,
           operators: prev.operators.map(o =>
@@ -121,10 +121,10 @@ export function OperatorsPage({ active }: { active: boolean }) {
           await api.updateOperatorProfile(newId, { photo: editPhoto });
           setOpPhotos(prev => ({ ...prev, [newId]: editPhoto }));
         }
-        
+
         const salaryNum = Number(form.salary) || 0;
         const wdNum = Number(form.workingDays) || 26;
-        
+
         const newOp: Operator = {
           id: newId,
           name,
@@ -133,8 +133,8 @@ export function OperatorsPage({ active }: { active: boolean }) {
           aadhaar: form.aadhaar.trim(),
           status: 'active',
         };
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           operators: [...prev.operators, newOp],
           operatorProfiles: {
             ...prev.operatorProfiles,
@@ -237,45 +237,45 @@ export function OperatorsPage({ active }: { active: boolean }) {
             const crane = state.cranes.find(c => c.operator === op.id || c.operator === op.phone);
             const opTs: TimesheetEntry[] = (state.timesheets[op.phone] || state.timesheets[op.id] || []);
             const initials = op.name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || op.phone.slice(-2);
-            
+
             // Salary Calculation
             const opKey = op.phone || String(op.id);
             const profileAny = (state.operatorProfiles as any)[opKey] || {};
             const salary = Number(profileAny?.salary) || 0;
             const workDays = Number(profileAny?.workingDays) || 26;
-            
+
             const now = new Date();
             const yr = now.getFullYear();
             const mo = now.getMonth() + 1;
             const daysInMonth = new Date(yr, mo, 0).getDate();
             const selectedMonth = `${yr}-${String(mo).padStart(2, '0')}`;
-            
+
             const dayHoursMap: Record<string, number> = {};
             opTs.forEach(e => {
-               const iso = e?.date?.substring(0, 10);
-               if (iso) dayHoursMap[iso] = (dayHoursMap[iso] || 0) + (Number(e?.hoursDecimal) || 0);
+              const iso = e?.date?.substring(0, 10);
+              if (iso) dayHoursMap[iso] = (dayHoursMap[iso] || 0) + (Number(e?.hoursDecimal) || 0);
             });
             const att: Record<string, boolean> = {};
             for (const [iso, hrs] of Object.entries(dayHoursMap)) {
-               if (hrs > 0 && iso.startsWith(selectedMonth)) att[iso] = true;
+              if (hrs > 0 && iso.startsWith(selectedMonth)) att[iso] = true;
             }
             state.attendance.filter((a: any) => a?.operator_key === opKey && a.date.startsWith(selectedMonth)).forEach((a: any) => {
-               if (a?.status === 'present') att[a.date] = true;
-               else if (a?.status === 'absent') att[a.date] = false;
+              if (a?.status === 'present') att[a.date] = true;
+              else if (a?.status === 'absent') att[a.date] = false;
             });
             let presentCount = 0;
             for (let d = 1; d <= daysInMonth; d++) {
-               const iso = `${selectedMonth}-${String(d).padStart(2, '0')}`;
-               if (att[iso]) presentCount++;
+              const iso = `${selectedMonth}-${String(d).padStart(2, '0')}`;
+              if (att[iso]) presentCount++;
             }
-            
+
             const perDay = workDays > 0 ? salary / workDays : 0;
             const earnedGross = Math.round(perDay * presentCount);
-            
+
             const opAdvances = ((state.advancePayments as any)[opKey] || []) as any[];
             const monthlyAdvances = Array.isArray(opAdvances) ? opAdvances.filter(a => a?.date?.startsWith(selectedMonth)) : [];
             const totalAdvances = monthlyAdvances.reduce((s, a) => s + (Number(a?.amount) || 0), 0);
-            
+
             return (
               <div key={op.id} className="op-row">
                 {opPhotos[op.id] ? (
@@ -298,9 +298,9 @@ export function OperatorsPage({ active }: { active: boolean }) {
                   </div>
                 </div>
                 <div className="op-row-right">
-                  <button 
-                    className="ca-btn" 
-                    title="Add Advance" 
+                  <button
+                    className="ca-btn"
+                    title="Add Advance"
                     style={{ background: 'var(--green-s)', color: 'var(--green)', borderColor: 'var(--green-s)' }}
                     onClick={() => {
                       const baseSalary = Number(((state.operatorProfiles as any)[opKey] || {}).salary) || 0;
@@ -308,7 +308,7 @@ export function OperatorsPage({ active }: { active: boolean }) {
                       const amt = prompt(`Enter advance amount to pay ${op.name}:`);
                       if (!amt) return;
                       const notes = prompt('Enter notes/reason (optional):') || '';
-                      
+
                       const nowISO = new Date().toISOString();
                       const newAdv = { id: String(Date.now()), date: nowISO, amount: Number(amt), notes };
                       setState(prev => ({
@@ -393,7 +393,7 @@ export function OperatorsPage({ active }: { active: boolean }) {
           <input className="inp" placeholder="DL number" value={form.license} onChange={e => f('license', e.target.value)} />
           <label className="lbl">Aadhaar No.</label>
           <input className="inp" placeholder="Aadhaar number" value={form.aadhaar} onChange={e => f('aadhaar', e.target.value)} />
-          
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <div style={{ flex: 1 }}>
               <label className="lbl">Monthly Salary (₹)</label>
@@ -418,9 +418,9 @@ export function OperatorsPage({ active }: { active: boolean }) {
           <select className="inp" value={selectedCrane} onChange={e => setSelectedCrane(e.target.value)}>
             <option value="">— Leave unassigned —</option>
             {state.cranes.filter(c => !c.operator || c.operator === (state.operators.find(o => o.id === assignOpId)?.phone || '')).map(c => (
-                <option key={c.reg} value={c.reg}>
-                  {c.reg}{c.make ? ` · ${c.make}` : ''}{c.model ? ` ${c.model}` : ''}
-                </option>
+              <option key={c.reg} value={c.reg}>
+                {c.reg}{c.make ? ` · ${c.make}` : ''}{c.model ? ` ${c.model}` : ''}
+              </option>
             ))}
           </select>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>

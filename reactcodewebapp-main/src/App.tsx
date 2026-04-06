@@ -3,6 +3,7 @@ import { useApp } from './context/AppContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { MobileDrawer } from './components/layout/MobileDrawer';
 import { ToastContainer } from './components/ui/Toast';
+import { AuthPage } from './components/auth/AuthPage';
 import { FleetPage } from './pages/Fleet/FleetPage';
 import { OperatorsPage } from './pages/Operators/OperatorsPage';
 import { EarningsPage } from './pages/Earnings/EarningsPage';
@@ -187,7 +188,6 @@ export default function App() {
       if (mode === 'register') {
         // Register with OTP (single endpoint verifies OTP + creates user)
         const res = await api.registerWithOtp(phone, name, email, otp);
-        // Clear any stale data before loading new user's data
         clearUserData();
         setToken(res.token);
         setUser(res.phone);
@@ -195,9 +195,8 @@ export default function App() {
         setActivePage('fleet');
         loadDataFromAPI();
       } else {
-        // Login: verify OTP and get token
+        // Login: verify OTP and get token (works for both owners and operators)
         const res = await api.verifyLoginOtp(phone, otp);
-        // Clear any stale data before loading new user's data
         clearUserData();
         setToken(res.token);
         setUser(res.phone);
@@ -236,194 +235,7 @@ export default function App() {
   });
 
   if (!user) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-        padding: '20px',
-      }}>
-        <form onSubmit={handleSubmit} style={{
-          background: 'var(--bg2)',
-          border: '1px solid var(--border)',
-          borderRadius: '16px',
-          padding: '40px',
-          width: '100%',
-          maxWidth: '420px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-        }}>
-          {/* Logo & subtitle */}
-          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--fh)', letterSpacing: '-0.5px' }}>
-            Suprwise
-          </div>
-          <div style={{ fontSize: '13px', color: 'var(--t3)' }}>
-            {mode === 'login' ? 'Sign in to your account' : 'Create a new account'}
-          </div>
-
-          {/* Mode toggle */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {(['login', 'register'] as const).map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => { setMode(m); resetForm(); }}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  background: mode === m ? 'var(--accent)' : 'var(--bg3)',
-                  color: mode === m ? '#fff' : 'var(--t2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {m === 'login' ? 'Login' : 'Register'}
-              </button>
-            ))}
-          </div>
-
-          {/* Register fields */}
-          {mode === 'register' && (
-            <>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Full name"
-                required
-                style={inputStyle()}
-                autoFocus
-              />
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Email address"
-                required
-                style={inputStyle()}
-              />
-            </>
-          )}
-
-          {/* Phone (always shown) */}
-          {mode === 'login' && (
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="Phone number"
-              required
-              style={inputStyle()}
-              autoFocus={!otpRequested}
-            />
-          )}
-          {mode === 'register' && (
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="Phone number"
-              required
-              style={inputStyle()}
-              disabled={otpRequested}
-            />
-          )}
-
-          {/* OTP input (appears after requesting) */}
-          {otpRequested && (
-            <input
-              type="text"
-              value={otp}
-              onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="Enter 6-digit OTP"
-              required
-              maxLength={6}
-              style={inputStyle({
-                fontSize: '20px',
-                fontWeight: 700,
-                letterSpacing: '10px',
-                textAlign: 'center',
-                fontFamily: 'monospace',
-              })}
-              autoFocus
-            />
-          )}
-
-          {/* Resend link */}
-          {otpRequested && (
-            <button
-              type="button"
-              onClick={handleRequestOtp}
-              disabled={otpSecondsLeft > 0 || authLoading}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: otpSecondsLeft > 0 ? 'var(--t3)' : 'var(--accent)',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: otpSecondsLeft > 0 ? 'not-allowed' : 'pointer',
-                textAlign: 'right',
-                alignSelf: 'flex-end',
-                padding: '0',
-              }}
-            >
-              {otpSecondsLeft > 0 ? `Valid for ${Math.floor(otpSecondsLeft / 60)}m ${otpSecondsLeft % 60}s` : 'Resend OTP'}
-            </button>
-          )}
-
-          {/* Error message */}
-          {authError && (
-            <div style={{
-              fontSize: '13px',
-              color: 'var(--error, #e53e3e)',
-              padding: '10px 12px',
-              background: 'rgba(229, 62, 62, 0.08)',
-              border: '1px solid rgba(229, 62, 62, 0.2)',
-              borderRadius: '8px',
-            }}>
-              {authError}
-            </div>
-          )}
-
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={authLoading}
-            style={{
-              padding: '12px',
-              background: 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 700,
-              fontSize: '14px',
-              cursor: authLoading ? 'not-allowed' : 'pointer',
-              opacity: authLoading ? 0.7 : 1,
-              marginTop: '4px',
-              letterSpacing: '0.3px',
-            }}
-          >
-            {authLoading
-              ? otpRequested
-                ? 'Verifying...'
-                : 'Sending OTP...'
-              : !otpRequested
-                ? 'Request OTP'
-                : mode === 'login'
-                  ? 'Sign In'
-                  : 'Create Account'}
-          </button>
-
-        </form>
-      </div>
-    );
+    return <AuthPage loadDataFromAPI={loadDataFromAPI} />;
   }
 
   // ── Authenticated ──

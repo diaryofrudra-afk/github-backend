@@ -1,4 +1,5 @@
 import uuid
+import secrets
 from fastapi import APIRouter, Depends, HTTPException
 from ..database import get_db
 from ..auth.dependencies import get_current_user
@@ -20,6 +21,17 @@ async def get_operators(user=Depends(get_current_user), db=Depends(get_db)):
 @router.post("")
 async def create_operator(body: OperatorCreate, user=Depends(get_current_user), db=Depends(get_db)):
     operator_id = body.id or str(uuid.uuid4())
+    
+    # Check phone not already registered as a user
+    cursor2 = await db.execute("SELECT id FROM users WHERE phone = ?", (body.phone,))
+    if await cursor2.fetchone():
+        raise HTTPException(400, "Phone number already registered")
+    
+    # Check operator doesn't already exist
+    cursor3 = await db.execute("SELECT id FROM operators WHERE phone = ? AND tenant_id = ?", (body.phone, user["tenant_id"]))
+    if await cursor3.fetchone():
+        raise HTTPException(400, "Operator with this phone number already exists")
+    
     await db.execute(
         """INSERT INTO operators (id, name, phone, license, aadhaar, assigned, status, tenant_id)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -28,20 +40,23 @@ async def create_operator(body: OperatorCreate, user=Depends(get_current_user), 
             body.aadhaar, body.assigned, body.status, user["tenant_id"],
         ),
     )
-    # Auto-create a user account so the operator can log in
-    cursor2 = await db.execute("SELECT id FROM users WHERE phone = ?", (body.phone,))
-    if not await cursor2.fetchone():
-        user_id = str(uuid.uuid4())
-        await db.execute(
-            "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
-            (user_id, body.phone, hash_password(""), "operator", user["tenant_id"]),
-        )
+    
+    # Auto-create a user account with a random temp password — operator must use OTP login
+    temp_password = secrets.token_urlsafe(16)
+    user_id = str(uuid.uuid4())
+    await db.execute(
+        "INSERT INTO users (id, phone, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
+        (user_id, body.phone, hash_password(temp_password), "operator", user["tenant_id"]),
+    )
     await db.commit()
+    
     cursor = await db.execute(
         "SELECT * FROM operators WHERE id = ? AND tenant_id = ?", (operator_id, user["tenant_id"])
     )
     row = await cursor.fetchone()
-    return dict(row)
+    result = dict(row)
+    result["temp_password"] = temp_password  # Return to owner so they can share with operator
+    return result
 
 
 @router.put("/{operator_id}")

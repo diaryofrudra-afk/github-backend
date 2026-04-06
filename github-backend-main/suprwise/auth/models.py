@@ -56,3 +56,7 @@ class RegisterWithOtpReq(BaseModel):
     otp: str
 
 
+class GoogleAuthReq(BaseModel):
+    credential: str  # Google ID token
+
+

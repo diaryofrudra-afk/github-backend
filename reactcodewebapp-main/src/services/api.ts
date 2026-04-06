@@ -128,6 +128,9 @@ export const api = {
   register(phone: string, password: string, role: string, company_name?: string, tenant_code?: string, email?: string): Promise<AuthResponse> {
     return request('POST', '/auth/register', { phone, password, role, company_name, tenant_code, email });
   },
+  googleAuth(credential: string): Promise<AuthResponse> {
+    return request('POST', '/auth/google', { credential });
+  },
   me(): Promise<MeResponse> {
     return request('GET', '/auth/me');
   },

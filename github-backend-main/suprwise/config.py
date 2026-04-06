@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     SMS_OTP_EXPIRY_MINUTES: int = 10
     SMS_OTP_MAX_ATTEMPTS: int = 3
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+
     # Blackbuck GPS integration — API token based (no Playwright needed)
     # Extract from browser localStorage after logging into blackbuck.com/boss/gps
     BLACKBUCK_AUTH_TOKEN: str = ""

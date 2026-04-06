@@ -81,6 +81,8 @@ async def create_and_send_sms_otp(phone: str, purpose: str = "registration") -> 
     If a valid (non-expired) OTP already exists for this phone+purpose, return it
     instead of generating a new one — prevents OTP churn on repeated clicks.
 
+    Supported purposes: "registration", "login", "operator_registration", "password_reset"
+
     Returns OTP string on success, None on failure.
     """
     db = await get_db()
