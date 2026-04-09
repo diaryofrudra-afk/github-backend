@@ -24,14 +24,14 @@ export interface DetailedTextLayoutResult extends TextLayoutResult {
 function useFontsReady(): boolean {
   const [ready, setReady] = useState(
     typeof document !== 'undefined' && typeof document.fonts !== 'undefined'
-      ? document.fonts.status === 'loaded' || document.fonts.status === 'unloaded'
+      ? document.fonts.status === 'loaded'
       : true,
   );
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof document.fonts === 'undefined') return;
 
-    if (document.fonts.status === 'loaded' || document.fonts.status === 'unloaded') {
+    if (document.fonts.status === 'loaded') {
       setReady(true);
       return;
     }

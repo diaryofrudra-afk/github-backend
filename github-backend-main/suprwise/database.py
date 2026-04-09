@@ -54,6 +54,32 @@ async def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_sms_otps_phone ON sms_otps(phone);
     """)
 
+    # Ensure trakntell_credentials table exists (Trak N Tell GPS iframe integration)
+    await _db.execute("""
+        CREATE TABLE IF NOT EXISTS trakntell_credentials (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id),
+            user_id_encrypted TEXT NOT NULL,
+            user_id_encrypt_encrypted TEXT NOT NULL,
+            orgid_encrypted TEXT NOT NULL,
+            sessionid_encrypted TEXT,
+            tnt_s_encrypted TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    await _db.execute("CREATE INDEX IF NOT EXISTS idx_tnt_creds_user ON trakntell_credentials(user_id)")
+    await _db.execute("CREATE INDEX IF NOT EXISTS idx_tnt_creds_tenant ON trakntell_credentials(tenant_id)")
+
+    # Migrations for trakntell_credentials: add missing columns safely
+    cursor = await _db.execute("PRAGMA table_info(trakntell_credentials)")
+    tnt_cols = [r[1] for r in await cursor.fetchall()]
+    if "sessionid_encrypted" not in tnt_cols:
+        await _db.execute("ALTER TABLE trakntell_credentials ADD COLUMN sessionid_encrypted TEXT")
+    if "tnt_s_encrypted" not in tnt_cols:
+        await _db.execute("ALTER TABLE trakntell_credentials ADD COLUMN tnt_s_encrypted TEXT")
+
     await _db.commit()
 
 

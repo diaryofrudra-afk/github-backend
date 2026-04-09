@@ -197,6 +197,111 @@ async def websocket_blackbuck_telemetry(websocket: WebSocket):
             pass
 
 
+@router.post("/sync-to-fleet")
+async def sync_all_gps_to_fleet(
+    user=Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """
+    Sync ALL GPS vehicles (Blackbuck + Trak N Tell) to the fleet (cranes table).
+    Performs an UPSERT: Adds new vehicles and updates existing ones with live GPS telemetry.
+    Normalizes registration numbers by removing spaces and uppercasing.
+    """
+    from ..trakntell.service import fetch_trakntell_vehicle_data
+
+    added = 0
+    updated = 0
+    errors = []
+
+    # Helper to sync a single vehicle
+    async def sync_vehicle(reg: str, provider: str, status: str, notes: str,
+                           type_str: str = "Heavy Equipment", make_str: str = "", model_str: str = "Truck"):
+        nonlocal added, updated
+        reg = reg.replace(" ", "").strip().upper()
+        if not reg:
+            return
+
+        cursor = await db.execute(
+            "SELECT id, reg FROM cranes WHERE (reg = ? OR replace(reg, ' ', '') = ?) AND tenant_id = ?",
+            (reg, reg, user["tenant_id"]),
+        )
+        existing = await cursor.fetchone()
+
+        try:
+            if existing:
+                await db.execute(
+                    "UPDATE cranes SET status = ?, notes = ?, reg = ? WHERE id = ?",
+                    (status, notes, reg, existing[0]),
+                )
+                updated += 1
+            else:
+                await db.execute(
+                    "INSERT INTO cranes (id, reg, type, make, model, capacity, year, rate, ot_rate, daily_limit, operator, site, status, notes, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        str(uuid.uuid4()),
+                        reg,
+                        type_str,
+                        make_str,
+                        model_str,
+                        "",
+                        "",
+                        0.0,
+                        0.0,
+                        8.0,
+                        "",
+                        "",
+                        status,
+                        notes,
+                        user["tenant_id"],
+                    ),
+                )
+                added += 1
+        except Exception as e:
+            errors.append(f"{reg}: {str(e)}")
+
+    # ── Sync Blackbuck vehicles ──
+    bb_data = await fetch_blackbuck_telemetry(user_id=user["user_id"])
+    if not bb_data.error:
+        for v in bb_data.vehicles:
+            reg = v.registration_number.replace(" ", "").strip().upper()
+            if not reg:
+                continue
+            status_text = v.status.replace("_", " ").title()
+            if v.engine_on:
+                status_text = f"{status_text} (Engine ON)"
+            notes = f"Blackbuck GPS | Signal: {v.signal} | Ignition: {v.ignition_status} | Last updated: {v.last_updated}"
+            if v.address:
+                notes += f" | Location: {v.address[:100]}"
+            await sync_vehicle(reg, "blackbuck", status_text, notes, "Heavy Equipment", "Blackbuck GPS", "Truck")
+
+    # ── Sync Trak N Tell vehicles ──
+    tnt_data = await fetch_trakntell_vehicle_data(user_id=user["user_id"])
+    if not tnt_data.error:
+        for v in tnt_data.vehicles:
+            reg = v.registration_number.replace(" ", "").strip().upper()
+            if not reg:
+                continue
+            status_text = v.status.replace("_", " ").title()
+            ign_display = "🟢 ON" if v.ignition == "on" else "🔴 OFF" if v.ignition == "off" else "⚪ UNKNOWN"
+            notes = (
+                f"Trak N Tell GPS | Ignition: {ign_display} | "
+                f"GSM: {v.gsm_signal} ({v.network_status}) | "
+                f"Power: {v.main_voltage:.2f}V | "
+                f"GPS: {'OK' if v.is_gps_working else 'LOST'} | "
+                f"Last updated: {v.last_updated}"
+            )
+            if v.address:
+                notes += f" | Location: {v.address[:100]}"
+            await sync_vehicle(reg, "trakntell", status_text, notes, "Heavy Equipment", "Trak N Tell", "Truck")
+
+    await db.commit()
+
+    result = {"ok": True, "added": added, "updated": updated}
+    if errors:
+        result["errors"] = errors
+    return result
+
+
 @router.post("/blackbuck/sync-to-fleet")
 async def sync_vehicles_to_fleet(
     user=Depends(get_current_user),

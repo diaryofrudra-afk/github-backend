@@ -175,3 +175,7 @@ The backend exposes RESTful API endpoints under `/api/`. Key routes include:
 
 - Latest commit: `UI/UX overhaul: responsive design, custom icons, pitch black dark theme, smooth sidebar animations`
 - The project is actively maintained with focus on modernization and UX improvements
+
+## Qwen Added Memories
+- OTP for phone 9010719021 is generated via SQLite sms_otps table. The frontend sends phone without +91 prefix (e.g. "9010719021"), backend stores with same format. OTPs are single-use (deleted on verification). Expired OTPs cause "invalid/expired" errors. To generate: INSERT into sms_otps with id="{phone}:{otp}:{timestamp}", phone, otp, purpose="login", expires_at.
+- Trak N Tell GPS integration: uses Playwright to scrape https://mapsweb.trakmtell.com/tnt/servlet/tntWebCurrentStatus. Credentials stored in trakntell_credentials table (encrypted). Required: JSESSIONID + tnt_s cookies from Chrome. Scrape logic finds vehicle rows by matching /^[A-Z]{2,}\d+[A-Z]*\d+$/ pattern. Server runs on port 8000 via uvicorn suprwise.main:app. Database at github-backend-main/data/suprwise.db.

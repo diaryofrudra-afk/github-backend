@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from './context/AppContext';
 import { Sidebar } from './components/layout/Sidebar';
+import { BottomNav } from './components/layout/BottomNav';
 import { MobileDrawer } from './components/layout/MobileDrawer';
 import { ToastContainer } from './components/ui/Toast';
 import { AuthPage } from './components/auth/AuthPage';
@@ -20,26 +21,13 @@ import { OpHistoryPage } from './pages/OpHistory/OpHistoryPage';
 import { FloatingDashboard } from './components/layout/FloatingDashboard';
 import { SettingsModal } from './pages/Settings/SettingsPage';
 import { ErrorBoundary } from './ErrorBoundary';
-import { api, setToken, clearToken, getToken } from './services/api';
+import { api, clearToken, getToken } from './services/api';
 import { toISO } from './utils';
 import type { AppState } from './types';
 
 export default function App() {
   const { activePage, setActivePage, sidebarCollapsed, user, setUser, userRole, setUserRole, setState, clearUserData } = useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // Auth form state
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpRequested, setOtpRequested] = useState(false);
-  const [otpExpiresAt, setOtpExpiresAt] = useState<Date | null>(null);
-  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
-  const [authError, setAuthError] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-  const otpRequestRef = useRef(false);
 
   function loadDataFromAPI() {
     // Reset to empty state first — never show stale data
@@ -137,110 +125,13 @@ export default function App() {
     clearUserData();
   }
 
-  function startOtpTimer(expiresInMinutes: number) {
-    const expiry = new Date(Date.now() + expiresInMinutes * 60_000);
-    setOtpExpiresAt(expiry);
-    setOtpSecondsLeft(expiresInMinutes * 60);
-    const interval = setInterval(() => {
-      setOtpSecondsLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return interval;
-  }
-
-  async function handleRequestOtp() {
-    if (otpRequestRef.current || otpSecondsLeft > 0) return;
-    otpRequestRef.current = true;
-    setAuthError('');
-    setAuthLoading(true);
-    try {
-      const purpose = mode === 'register' ? 'registration' : 'login';
-      const resp = await api.sendSmsOtp(phone, purpose);
-      setOtpRequested(true);
-      const mins = resp.expires_in_minutes || 10;
-      startOtpTimer(mins);
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Failed to send OTP');
-    } finally {
-      setAuthLoading(false);
-      otpRequestRef.current = false;
-    }
-  }
-
-  async function handleSubmit(e: React.SyntheticEvent) {
-    e.preventDefault();
-    setAuthError('');
-
-    // Step 1: Request OTP
-    if (!otpRequested) {
-      await handleRequestOtp();
-      return;
-    }
-
-    // Step 2: Verify OTP and login/register
-    setAuthLoading(true);
-    try {
-      if (mode === 'register') {
-        // Register with OTP (single endpoint verifies OTP + creates user)
-        const res = await api.registerWithOtp(phone, name, email, otp);
-        clearUserData();
-        setToken(res.token);
-        setUser(res.phone);
-        setUserRole(res.role);
-        setActivePage('fleet');
-        loadDataFromAPI();
-      } else {
-        // Login: verify OTP and get token (works for both owners and operators)
-        const res = await api.verifyLoginOtp(phone, otp);
-        clearUserData();
-        setToken(res.token);
-        setUser(res.phone);
-        setUserRole(res.role);
-        setActivePage(res.role === 'operator' ? 'logger' : 'fleet');
-        loadDataFromAPI();
-      }
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setAuthLoading(false);
-    }
-  }
-
-  function resetForm() {
-    setAuthError('');
-    setOtpRequested(false);
-    setOtp('');
-    setOtpExpiresAt(null);
-    setOtpSecondsLeft(0);
-    otpRequestRef.current = false;
-  }
-
-  // ── Styles ──
-  const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
-    padding: '10px 14px',
-    background: 'var(--bg3)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    color: 'var(--t1)',
-    fontSize: '14px',
-    outline: 'none',
-    boxSizing: 'border-box',
-    width: '100%',
-    ...extra,
-  });
-
   if (!user) {
     return <AuthPage loadDataFromAPI={loadDataFromAPI} />;
   }
 
   // ── Authenticated ──
   return (
-    <div id="app-shell" className={`visible${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+    <div id="app-shell" className={`visible${sidebarCollapsed ? ' sidebar-collapsed' : ''}${userRole === 'operator' ? ' operator-mode' : ''}`}>
       <div className="body-split">
         <Sidebar onSignOut={handleSignOut} />
         <div className="page-content">
@@ -267,6 +158,7 @@ export default function App() {
           )}
         </div>
       </div>
+      {userRole === 'operator' && <BottomNav onSignOut={handleSignOut} />}
       <MobileDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}

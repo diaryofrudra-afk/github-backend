@@ -14,7 +14,6 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  // Default: not active (will be overridden by GPS page)
   const [active, setActive] = useState(false);
   const { data, loading, error, refetch } = useBlackbuck(active);
   return (

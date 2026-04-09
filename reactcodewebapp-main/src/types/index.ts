@@ -248,6 +248,35 @@ export interface BlackbuckData {
   [key: string]: unknown;
 }
 
+export interface TrakNTellData {
+  iframe_url?: string;
+  error?: string;
+  vehicles?: TrakNTellVehicle[];
+  [key: string]: unknown;
+}
+
+export interface TrakNTellVehicle {
+  registration_number: string;
+  status: string;
+  ignition?: string;           // "on" | "off" | "unknown" — ENGINE status
+  latitude?: number;
+  longitude?: number;
+  speed?: number;
+  last_updated?: string;
+  address?: string;
+  // Network / Signal
+  gsm_signal?: number;         // GSM signal strength (0-31)
+  network_status?: string;     // "good" | "fair" | "weak" | "lost"
+  is_gsm_working?: boolean;
+  is_gps_working?: boolean;
+  // Device Health
+  main_voltage?: number;
+  backup_voltage?: number;
+  battery_charge?: string;
+  is_main_power_low?: boolean;
+  [key: string]: unknown;
+}
+
 export interface AttendanceRecord {
   id: string;
   operator_key: string;

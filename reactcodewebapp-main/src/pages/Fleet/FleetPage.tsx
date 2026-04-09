@@ -34,6 +34,8 @@ export function FleetPage({ active }: { active: boolean }) {
   const [selectedOp, setSelectedOp] = useState('');
   const [assetModal, setAssetModal] = useState(false);
   const [opModal, setOpModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+  const [editingCrane, setEditingCrane] = useState<Crane | null>(null);
   const [assetForm, setAssetForm] = useState({ reg: '', type: '', make: '', model: '', capacity: '', year: '', rate: '', otRate: '', dailyLimit: '8', site: '' });
   const [opForm, setOpForm] = useState({ name: '', phone: '', license: '', aadhaar: '' });
 
@@ -150,6 +152,45 @@ export function FleetPage({ active }: { active: boolean }) {
     }
   }
 
+  function handleEdit(reg: string) {
+    const crane = state.cranes.find(c => c.reg === reg);
+    if (!crane) return;
+    setEditingCrane(crane);
+    setEditModal(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingCrane) return;
+    const reg = editingCrane.reg.trim().toUpperCase();
+    if (!reg) return showToast('Registration ID required', 'error');
+    try {
+      await api.updateCrane(editingCrane.id, {
+        reg,
+        type: editingCrane.type,
+        make: editingCrane.make || '',
+        model: editingCrane.model || '',
+        capacity: editingCrane.capacity || '',
+        year: editingCrane.year || '',
+        rate: editingCrane.rate || 0,
+        ot_rate: editingCrane.otRate || 0,
+        daily_limit: editingCrane.dailyLimit || 8,
+        site: editingCrane.site || '',
+      });
+      setState(prev => ({
+        ...prev,
+        cranes: prev.cranes.map(c =>
+          c.id === editingCrane.id ? { ...editingCrane, reg } : c
+        ),
+      }));
+      save();
+      showToast(`${reg} updated`, 'success');
+      setEditModal(false);
+      setEditingCrane(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to update asset', 'error');
+    }
+  }
+
   const filterPills: Array<{ key: FleetFilter; label: string }> = [
     { key: 'all', label: 'All' },
     { key: 'assigned', label: 'Active' },
@@ -225,6 +266,7 @@ export function FleetPage({ active }: { active: boolean }) {
                 alerts={alerts}
                 onAssign={handleAssign}
                 onDelete={handleDelete}
+                onEdit={handleEdit}
               />
             );
           })
@@ -237,9 +279,9 @@ export function FleetPage({ active }: { active: boolean }) {
           <select className="inp" value={selectedOp} onChange={e => setSelectedOp(e.target.value)}>
             <option value="">— Leave unassigned —</option>
             {state.operators.filter(op => !state.cranes.some(c => c.operator === op.phone && c.reg !== assignReg)).map(op => (
-                <option key={op.id} value={op.phone}>
-                  {op.name ? `${op.name} "${op.phone}"` : op.phone}
-                </option>
+              <option key={op.id} value={op.phone}>
+                {op.name ? `${op.name} "${op.phone}"` : op.phone}
+              </option>
             ))}
           </select>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
@@ -305,6 +347,42 @@ export function FleetPage({ active }: { active: boolean }) {
             <button className="btn-sm outline" onClick={() => setOpModal(false)}>Cancel</button>
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Asset Modal */}
+      <Modal open={editModal} onClose={() => { setEditModal(false); setEditingCrane(null); }} title={`Edit Asset — ${editingCrane?.reg || ''}`}>
+        {editingCrane && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label className="lbl">Registration *</label>
+            <input
+              className="inp"
+              value={editingCrane.reg}
+              onChange={e => setEditingCrane({ ...editingCrane, reg: e.target.value.toUpperCase() })}
+            />
+            <label className="lbl">Type</label>
+            <input className="inp" value={editingCrane.type} onChange={e => setEditingCrane({ ...editingCrane, type: e.target.value })} />
+            <label className="lbl">Make</label>
+            <input className="inp" value={editingCrane.make || ''} onChange={e => setEditingCrane({ ...editingCrane, make: e.target.value })} />
+            <label className="lbl">Model</label>
+            <input className="inp" value={editingCrane.model || ''} onChange={e => setEditingCrane({ ...editingCrane, model: e.target.value })} />
+            <label className="lbl">Capacity</label>
+            <input className="inp" value={editingCrane.capacity || ''} onChange={e => setEditingCrane({ ...editingCrane, capacity: e.target.value })} />
+            <label className="lbl">Year</label>
+            <input className="inp" value={editingCrane.year || ''} onChange={e => setEditingCrane({ ...editingCrane, year: e.target.value })} />
+            <label className="lbl">Rate (₹/hr)</label>
+            <input className="inp" type="number" value={editingCrane.rate || 0} onChange={e => setEditingCrane({ ...editingCrane, rate: Number(e.target.value) })} />
+            <label className="lbl">OT Rate (₹/hr)</label>
+            <input className="inp" type="number" value={editingCrane.otRate || editingCrane.rate || 0} onChange={e => setEditingCrane({ ...editingCrane, otRate: Number(e.target.value) })} />
+            <label className="lbl">Daily Limit (hrs)</label>
+            <input className="inp" type="number" value={editingCrane.dailyLimit || 8} onChange={e => setEditingCrane({ ...editingCrane, dailyLimit: Number(e.target.value) })} />
+            <label className="lbl">Site</label>
+            <input className="inp" value={editingCrane.site || ''} onChange={e => setEditingCrane({ ...editingCrane, site: e.target.value })} />
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button className="btn-sm accent" onClick={handleSaveEdit}>Save Changes</button>
+              <button className="btn-sm outline" onClick={() => { setEditModal(false); setEditingCrane(null); }}>Cancel</button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

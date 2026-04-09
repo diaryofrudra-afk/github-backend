@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { PageId, Theme, AppState, OwnerProfile } from '../types';
-import { safeLoad, saveKey } from '../utils';
+import { saveKey } from '../utils';
 import { useTheme } from '../hooks/useTheme';
 import { useSidebar } from '../hooks/useSidebar';
 
@@ -36,34 +36,6 @@ const defaultOwnerProfile: OwnerProfile = {
   name: '', roleTitle: '', phone: '', email: '',
   company: '', city: '', state: '', gst: '', website: '', defaultLimit: '8',
 };
-
-function loadInitialState(): AppState {
-  return {
-    cranes: safeLoad('cranes', []),
-    operators: safeLoad('operators', []),
-    operatorProfiles: safeLoad('operatorProfiles', {}),
-    ownerProfile: safeLoad('ownerProfile', defaultOwnerProfile),
-    fuelLogs: safeLoad('fuelLogs', {}),
-    cameras: safeLoad('cameras', []),
-    integrations: safeLoad('integrations', { fuel: {}, cameras: {} }),
-    advancePayments: safeLoad('advancePayments', {}),
-    diagnostics: safeLoad('diagnostics', {}),
-    clients: safeLoad('clients', []),
-    invoices: safeLoad('invoices', []),
-    payments: safeLoad('payments', []),
-    creditNotes: safeLoad('creditNotes', []),
-    quotations: safeLoad('quotations', []),
-    proformas: safeLoad('proformas', []),
-    challans: safeLoad('challans', []),
-    files: safeLoad('files', {}),
-    timesheets: safeLoad('timesheets', {}),
-    compliance: safeLoad('compliance', {}),
-    attendance: safeLoad('attendance', []),
-    maintenance: safeLoad('maintenance', {}),
-    notifications: safeLoad('notifications', []),
-    opNotifications: safeLoad('opNotifications', {}),
-  };
-}
 
 const AppContext = createContext<AppContextValue | null>(null);
 

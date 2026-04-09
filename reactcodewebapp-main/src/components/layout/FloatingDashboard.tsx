@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { useData } from '../../context/DataContext';
+import { useUnifiedGPS } from '../../hooks/useUnifiedGPS';
 import { fmtINR, calcBill } from '../../utils';
 import type { TimesheetEntry } from '../../types';
 
 export function FloatingDashboard() {
   const { state, userRole } = useApp();
-  const { blackbuck } = useData();
+  const { vehicles: gpsVehicles } = useUnifiedGPS({ pollInterval: 30000 });
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const stats = useMemo(() => {
@@ -26,13 +26,16 @@ export function FloatingDashboard() {
     const deployed = state.cranes.filter(c => c.operator).length;
     const utilPct = state.cranes.length ? Math.round((deployed / state.cranes.length) * 100) : 0;
 
-    // Sync with GPS engine count
-    const gpsVehicles = blackbuck?.vehicles || [];
-    const engineOn = gpsVehicles.filter(v => v.engine_on === true).length;
-    const totalVehicles = gpsVehicles.length || state.cranes.length;
+    // Sync with unified GPS engine count — only for vehicles in the fleet
+    const fleetRegs = new Set(state.cranes.map(c => c.reg?.toUpperCase()).filter(Boolean));
+    const fleetGpsVehicles = gpsVehicles.filter(v =>
+      fleetRegs.has(v.registration_number?.toUpperCase())
+    );
+    const engineOn = fleetGpsVehicles.filter(v => v.engine_on === true || v.ignition === 'on').length;
+    const totalVehicles = fleetGpsVehicles.length || state.cranes.length;
 
     return { totalRev, deployed, total: state.cranes.length, utilPct, engineOn, totalVehicles };
-  }, [state, userRole, blackbuck]);
+  }, [state, userRole, gpsVehicles]);
 
   if (!stats) return null;
 
@@ -46,21 +49,20 @@ export function FloatingDashboard() {
   }
 
   return (
-    <div className="floating-dashboard">
-      <button className="fd-close-btn" onClick={() => setIsCollapsed(true)} title="Hide Stats">×</button>
+    <div className="floating-dashboard" onClick={() => setIsCollapsed(true)} style={{ cursor: 'pointer' }}>
       <div className="fd-item">
         <span className="fd-label">Revenue</span>
-        <span className="fd-value accent">{fmtINR(stats.totalRev)}</span>
+        <span className="fd-value">{fmtINR(stats.totalRev)}</span>
       </div>
       <div className="fd-divider" />
       <div className="fd-item">
         <span className="fd-label">Utilization</span>
-        <span className="fd-value amber">{stats.utilPct}%</span>
+        <span className="fd-value">{stats.utilPct}%</span>
       </div>
       <div className="fd-divider" />
       <div className="fd-item">
         <span className="fd-label">Active Fleet</span>
-        <span className="fd-value green">{stats.engineOn}/{stats.totalVehicles}</span>
+        <span className="fd-value">{stats.engineOn}/{stats.totalVehicles}</span>
       </div>
     </div>
   );

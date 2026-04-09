@@ -79,7 +79,8 @@ export function LineChart({ data, options, height, gradient = false }: LineChart
           color: tickColor,
           font: { size: 9 },
           padding: 8,
-          callback: (value: number) => {
+          callback: (value: string | number) => {
+            if (typeof value === 'string') return value;
             if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
             if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
             if (value >= 1000) return `₹${(value / 1000).toFixed(0)}K`;

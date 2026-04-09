@@ -1,25 +1,23 @@
 import { useState, useCallback } from 'react';
 import { getToken } from '../services/api';
 
-interface BlackbuckSettings {
+interface TrakNTellCredentials {
   configured: boolean;
-  token_preview: string;
-  fleet_owner_id: string;
+  user_id_preview: string;
   updated_at?: string;
+  has_sessionid?: boolean;
 }
 
-interface BlackbuckHealth {
+interface TrakNTellHealth {
   configured: boolean;
-  token_preview: string;
-  fleet_owner_id: string;
+  user_id_preview: string;
   vehicle_count: number;
   last_error: string;
 }
 
-export function useBlackbuckSettings() {
-  const [credentials, setCredentials] = useState<BlackbuckSettings | null>(null);
-  const [health, setHealth] = useState<BlackbuckHealth | null>(null);
-  const [loading] = useState(false);
+export function useTrakNTellSettings() {
+  const [credentials, setCredentials] = useState<TrakNTellCredentials | null>(null);
+  const [health, setHealth] = useState<TrakNTellHealth | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -27,7 +25,7 @@ export function useBlackbuckSettings() {
     const token = getToken();
     if (!token) return;
     try {
-      const r = await fetch('/api/gps/blackbuck/credentials', {
+      const r = await fetch('/api/gps/trakntell/credentials', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (r.ok) {
@@ -35,7 +33,7 @@ export function useBlackbuckSettings() {
         setCredentials(data);
       }
     } catch (e) {
-      console.error('Failed to fetch credentials:', e);
+      console.error('Failed to fetch Trak N Tell credentials:', e);
     }
   }, []);
 
@@ -43,7 +41,7 @@ export function useBlackbuckSettings() {
     const token = getToken();
     if (!token) return;
     try {
-      const r = await fetch('/api/gps/blackbuck/health', {
+      const r = await fetch('/api/gps/trakntell/health', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (r.ok) {
@@ -51,11 +49,11 @@ export function useBlackbuckSettings() {
         setHealth(data);
       }
     } catch (e) {
-      console.error('Failed to fetch health:', e);
+      console.error('Failed to fetch Trak N Tell health:', e);
     }
   }, []);
 
-  const saveCredentials = useCallback(async (auth_token: string, fleet_owner_id: string) => {
+  const saveCredentials = useCallback(async (user_id: string, user_id_encrypt: string, orgid: string, sessionid: string = '', tnt_s: string = '') => {
     const token = getToken();
     if (!token) {
       setError('Not authenticated');
@@ -64,13 +62,13 @@ export function useBlackbuckSettings() {
     setSaving(true);
     setError(null);
     try {
-      const r = await fetch('/api/gps/blackbuck/credentials', {
+      const r = await fetch('/api/gps/trakntell/credentials', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ auth_token, fleet_owner_id }),
+        body: JSON.stringify({ user_id, user_id_encrypt, orgid, sessionid, tnt_s }),
       });
       if (r.ok) {
         await fetchCredentials();
@@ -93,13 +91,13 @@ export function useBlackbuckSettings() {
     const token = getToken();
     if (!token) return false;
     try {
-      const r = await fetch('/api/gps/blackbuck/credentials', {
+      const r = await fetch('/api/gps/trakntell/credentials', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (r.ok) {
-        setCredentials({ configured: false, token_preview: '', fleet_owner_id: '', updated_at: '' });
-        setHealth({ configured: false, token_preview: '', fleet_owner_id: '', vehicle_count: 0, last_error: '' });
+        setCredentials({ configured: false, user_id_preview: '', updated_at: '' });
+        setHealth({ configured: false, user_id_preview: '', vehicle_count: 0, last_error: '' });
         return true;
       }
       return false;
@@ -111,7 +109,6 @@ export function useBlackbuckSettings() {
   return {
     credentials,
     health,
-    loading,
     error,
     saving,
     fetchCredentials,

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { api, setToken, clearToken } from '../../services/api';
+import { api, setToken } from '../../services/api';
 import './AuthPage.css';
 
 declare global {
@@ -17,7 +17,7 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [otpRequested, setOtpRequested] = useState(false);
-  const [otpExpiresAt, setOtpExpiresAt] = useState<Date | null>(null);
+  const [, setOtpExpiresAt] = useState<Date | null>(null);
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -158,7 +158,6 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
         <div className="form-container sign-up-form">
           <form onSubmit={handleSubmit}>
             <h1>Create Account</h1>
-            <div className="auth-subtitle">Register with phone number</div>
 
             {!otpRequested && (
               <>
@@ -202,7 +201,7 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
               </button>
             </div>
 
-            <div className="divider"><span>or sign in with email</span></div>
+            <div className="divider"><span>or sign up with email</span></div>
 
             <button type="button" className="google-btn" onClick={handleGoogleSignIn} disabled={googleLoading}>
               <svg className="google-icon" viewBox="0 0 24 24" width="18" height="18">
@@ -220,7 +219,6 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
         <div className="form-container sign-in-form">
           <form onSubmit={handleSubmit}>
             <h1>Sign In</h1>
-            <div className="auth-subtitle">Sign in with phone number & OTP</div>
 
             <div className="phone-input-wrapper">
               <span className="country-code">+91</span>
@@ -276,12 +274,12 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
           <div className="toggle">
             <div className="toggle-panel toggle-left">
               <h1>Welcome To<br />Suprwise</h1>
-              <p>Sign in with Google or phone OTP</p>
+              <p>Sign In to to see your Dashboard</p>
               <button className="hidden" id="login" onClick={switchToLogin}>Sign In</button>
             </div>
             <div className="toggle-panel toggle-right">
-              <h1>Hello There!</h1>
-              <p>Register with Google or phone to get started</p>
+              <h1>New to Suprwise ?</h1>
+              <p>Register to track your fleet using our Ai Powered Fleet Managment App</p>
               <button className="hidden" id="register" onClick={switchToRegister}>Sign Up</button>
             </div>
           </div>

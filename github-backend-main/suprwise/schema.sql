@@ -323,6 +323,21 @@ CREATE TABLE IF NOT EXISTS advance_payments (
     FOREIGN KEY(operator_key, tenant_id) REFERENCES operators(phone, tenant_id) ON DELETE CASCADE
 );
 
+-- Per-user Trak N Tell credentials (encrypted cookies at rest)
+-- Scoped to user_id so NO other user (even same tenant) can access
+CREATE TABLE IF NOT EXISTS trakntell_credentials (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    user_id_encrypted TEXT NOT NULL,
+    user_id_encrypt_encrypted TEXT NOT NULL,
+    orgid_encrypted TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_tnt_creds_user ON trakntell_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_tnt_creds_tenant ON trakntell_credentials(tenant_id);
+
 CREATE TABLE IF NOT EXISTS sms_otps (
     id TEXT PRIMARY KEY,
     phone TEXT NOT NULL,

@@ -25,46 +25,32 @@ export function LogbookViewer({ isOpen, onClose, fileDataUrl, fileName, onUpdate
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(5, 5, 10, 0.95)',
-      backdropFilter: 'blur(8px)',
-      WebkitBackdropFilter: 'blur(8px)',
-      zIndex: 9999,
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '24px',
-      overflow: 'hidden'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div style={{ color: '#fff', fontSize: '16px', fontWeight: 600, fontFamily: 'var(--fh)' }}>
+    <div className="logbook-viewer-overlay">
+      <div className="logbook-viewer-header">
+        <div className="logbook-viewer-title">
           {fileName || 'Logbook Scan'}
         </div>
-        <button 
-          onClick={onClose}
-          style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
+        <button className="logbook-viewer-close" onClick={onClose}>
           ✕
         </button>
       </div>
 
-      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'auto', background: 'rgba(0,0,0,0.5)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="logbook-viewer-image-container">
         {fileDataUrl ? (
           fileDataUrl.startsWith('data:application/pdf') ? (
-            <iframe src={fileDataUrl} style={{ width: '100%', height: '100%', border: 'none' }} title={fileName || 'Document'} />
+            <iframe src={fileDataUrl} className="logbook-viewer-iframe" title={fileName || 'Document'} />
           ) : (
-            <img src={fileDataUrl} alt="Logbook" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            <img src={fileDataUrl} alt="Logbook" className="logbook-viewer-img" />
           )
         ) : (
-          <div style={{ color: 'var(--t4)' }}>No image uploaded</div>
+          <div className="logbook-viewer-empty">No image uploaded</div>
         )}
       </div>
 
       {(onUpdate || onRemove) && (
-        <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center' }}>
+        <div className="logbook-viewer-actions">
           {onUpdate && (
-            <label className="btn-primary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px' }}>
+            <label className="btn-primary logbook-viewer-upload" style={{ cursor: 'pointer' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none">
                 <polyline points="16 16 12 12 8 16" />
                 <line x1="12" y1="12" x2="12" y2="21" />
@@ -81,7 +67,7 @@ export function LogbookViewer({ isOpen, onClose, fileDataUrl, fileName, onUpdate
             </label>
           )}
           {onRemove && fileDataUrl && (
-            <button className="btn-primary red" onClick={onRemove} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--red-s)', color: 'var(--red)', border: '1px solid var(--red-g)' }}>
+            <button className="btn-primary red logbook-viewer-remove" style={{ background: 'var(--red-s)', color: 'var(--red)', border: '1px solid var(--red-g)' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none">
                 <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>

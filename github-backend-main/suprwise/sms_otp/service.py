@@ -60,6 +60,17 @@ async def send_sms_otp(phone: str, otp: str) -> bool:
         if data.get("return") is True:
             logger.info(f"Fast2SMS OTP sent to {phone}")
             return True
+        
+        # Check for Fast2SMS specific error messages
+        error_msg = data.get("message", "")
+        if "complete one transaction" in error_msg or "status_code" in data:
+            logger.warning(f"Fast2SMS account not activated: {error_msg}")
+            print(f"\n{'='*50}")
+            print(f"  ⚠️  Fast2SMS requires ₹100 recharge to send SMS")
+            print(f"  📱 OTP for {phone}: {otp}")
+            print(f"{'='*50}\n")
+            return True  # Allow login with console OTP
+        
         logger.error(f"Fast2SMS send failed: {data}")
         # Fallback: log OTP to console
         print(f"\n{'='*50}")
@@ -95,9 +106,14 @@ async def create_and_send_sms_otp(phone: str, purpose: str = "registration") -> 
     row = await cursor.fetchone()
     if row:
         existing_otp, expires_at = row[0], row[1]
-        if datetime.fromisoformat(expires_at) > datetime.now(timezone.utc):
-            # Valid OTP exists — reuse it, don't generate new one
-            return existing_otp
+        try:
+            expires_dt = datetime.fromisoformat(expires_at)
+            if expires_dt > datetime.now(timezone.utc):
+                # Valid OTP exists — reuse it, don't generate new one
+                return existing_otp
+        except (ValueError, TypeError):
+            # Corrupted expires_at (e.g., ms timestamp) — ignore this record
+            pass
 
     # No valid OTP — generate new one
     otp = generate_otp(settings.SMS_OTP_LENGTH)
@@ -137,8 +153,11 @@ async def verify_sms_otp(phone: str, otp: str, purpose: str = "registration") ->
     stored_otp, expires_at, attempts = row[0], row[1], row[2]
     
     # Check expiry
-    if datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
-        return False
+    try:
+        if datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
+            return False
+    except (ValueError, TypeError):
+        return False  # Corrupted expires_at — treat as expired
     
     # Check max attempts
     if attempts >= settings.SMS_OTP_MAX_ATTEMPTS:

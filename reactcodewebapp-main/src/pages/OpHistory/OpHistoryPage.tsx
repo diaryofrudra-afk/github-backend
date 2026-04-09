@@ -1,10 +1,8 @@
 import { useApp } from '../../context/AppContext';
-import { fmtHours, todayISO, fmtDate } from '../../utils';
 import { api } from '../../services/api';
-import { Pretext } from '../../components/ui/Pretext';
 import type { TimesheetEntry } from '../../types';
 import { LogbookViewer } from '../../components/ui/LogbookViewer';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 function fmt12(t: string): string {
   if (!t) return '—';
@@ -12,41 +10,18 @@ function fmt12(t: string): string {
   return `${hh % 12 || 12}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'}`;
 }
 
-// getAccHrs removed as it was only used for billing calculations
+const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
 export function OpHistoryPage({ active }: { active: boolean }) {
   const { state, setState, showToast, user } = useApp();
   const { timesheets, files } = state;
   const [viewerFileId, setViewerFileId] = useState<string | null>(null);
 
-  const myTs: TimesheetEntry[] = user ? (timesheets[user] || []) : [];
+  const myTs: TimesheetEntry[] = useMemo(() => {
+    const entries = user ? (timesheets[user] || []) : [];
+    return [...entries].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [user, timesheets]);
   const myFiles: unknown[] = user ? (files[user] || []) : [];
-
-  const deleteEntry = async (id: string) => {
-    if (!confirm('Remove this entry?')) return;
-    const uid = user || '';
-    const entry = myTs.find(e => e.id === id);
-    setState(prev => {
-      const remaining = (prev.timesheets[uid] || []).filter(e => e.id !== id);
-      let attendance = prev.attendance;
-      // If no other entries remain for this date, remove auto-marked attendance
-      if (entry && !remaining.some(e => e.date === entry.date)) {
-        attendance = attendance.filter(a =>
-          !(a.operator_key === uid && a.date === entry.date && a.marked_by === 'operator')
-        );
-      }
-      return {
-        ...prev,
-        timesheets: { ...prev.timesheets, [uid]: remaining },
-        attendance,
-      };
-    });
-    try {
-      await api.deleteTimesheet(id);
-    } catch {
-      showToast('Failed to delete from server', 'error');
-    }
-  };
 
   const handleUpdateLogbook = async (file: File) => {
     const maxSize = 5 * 1024 * 1024;
@@ -79,105 +54,107 @@ export function OpHistoryPage({ active }: { active: boolean }) {
     reader.readAsDataURL(file);
   };
 
-  const exportXlsx = () => {
-    if (!XLSX) return showToast('XLSX library missing', 'error');
-    const wb = XLSX.utils.book_new();
-    const td: unknown[][] = [['Date', 'Start', 'End', 'Hours', 'OT', 'Asset', 'Remarks']];
-    myTs.forEach(e => {
-      const h = Number(e.hoursDecimal) || 0;
-      td.push([e.date, fmt12(e.startTime), fmt12(e.endTime), fmtHours(h), (e as TimesheetEntry & { hasOT?: boolean }).hasOT ? 'Yes' : 'No', (e as TimesheetEntry & { craneReg?: string }).craneReg || '—', myFiles.some((f: any) => f.name.startsWith(`Logbook-${e.date}`)) ? 'Logbook Attached' : '']);
-    });
-    const ws1 = XLSX.utils.aoa_to_sheet(td);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Timesheets');
-    const fd: unknown[][] = [['File', 'Type', 'Size', 'Uploaded']];
-    (myFiles as Array<{ name: string; type: string; size: string; timestamp: string }>).forEach(f => fd.push([f.name, f.type, f.size, f.timestamp]));
-    const ws2 = XLSX.utils.aoa_to_sheet(fd);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Files');
-    XLSX.writeFile(wb, `${user}_${todayISO()}.xlsx`);
-    showToast('Exported successfully.');
-  };
+  function getHoursBadgeColor(hrs: number): string {
+    if (hrs >= 10) return 'op-hours-purple';
+    if (hrs >= 8) return 'op-hours-green';
+    return 'op-hours-gray';
+  }
+
+  function formatDateParts(dateStr: string): { dayName: string; day: number; month: string; year: number; formatted: string } {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const day = d.getDate();
+    const month = d.toLocaleDateString('en-IN', { month: 'short' }).toUpperCase();
+    const year = d.getFullYear();
+    const formatted = `${String(day).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${year}`;
+    return { dayName, day, month, year, formatted };
+  }
 
   return (
     <div className={`page ${active ? 'active' : ''}`} id="page-op-history">
-      <div className="section-bar" style={{ marginBottom: 14 }}>
-        <div className="section-title">My Shift History</div>
-        <button className="btn-sm green" onClick={exportXlsx}>
-          <svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          {' '}Export
-        </button>
-      </div>
+      <div className="op-history-wrap">
+        {/* Section Header */}
+        <div className="op-history-section-header">
+          <span className="op-history-section-title">Recent Logs</span>
+          <button className="op-history-filter-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+            </svg>
+            Filter
+          </button>
+        </div>
 
-      <div id="op-history-content">
+        {/* Log Cards */}
         {!myTs.length ? (
           <p className="empty-msg">No shift history yet.</p>
         ) : (
-          <div className="bill-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Hours</th>
-                  <th>Asset Detail</th>
-                  <th style={{ textAlign: 'center' }}>Log Book</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {myTs.map(e => {
-                  const eh = Number(e.hoursDecimal) || 0;
-                  return (
-                    <tr key={e.id}>
-                      <td style={{ fontWeight: 700 }}>{fmtDate(e.date)}</td>
-                      <td>{fmt12(e.startTime)}</td>
-                      <td>{fmt12(e.endTime)}</td>
-                      <td>
-                        <span className="hours-badge">{fmtHours(eh)}</span>
-                        {(e as TimesheetEntry & { hasOT?: boolean }).hasOT && <span className="ot-badge"> OT</span>}
-                      </td>
-                      <td>
-                        <Pretext 
-                          text={(e as TimesheetEntry & { craneReg?: string }).craneReg || 'No Asset Attached'} 
-                          font="600 11px var(--fm)"
-                          lineHeight={16}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                         {(() => {
-                            const todayLogbook = myFiles.find((f: any) => f.name.startsWith(`Logbook-${e.date}`)) as any;
-                            if (!todayLogbook) return <span style={{fontSize:10, color:'var(--t4)'}}>Missing</span>;
-                            return (
-                               <div onClick={() => setViewerFileId(todayLogbook.id)} style={{width: 32, height: 32, cursor: 'pointer', borderRadius: 6, overflow: 'hidden', border:'1px solid var(--border)', display: 'inline-block'}}>
-                                   {todayLogbook.type.includes('image') ? <img src={todayLogbook.data} alt="thumb" style={{width:'100%', height:'100%', objectFit: 'cover'}}/> : <div style={{background:'var(--bg4)', width:'100%', height:'100%', fontSize:8, display:'flex', alignItems:'center', justifyContent:'center'}}>DOC</div>}
-                               </div>
-                            );
-                         })()}
-                      </td>
-                      <td>
-                        <button
-                          className="btn-icon-sm red"
-                          style={{ width: 26, height: 26 }}
-                          onClick={() => deleteEntry(e.id)}
-                          title="Delete entry"
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="op-history-cards">
+            {myTs.map(e => {
+              const eh = Number(e.hoursDecimal) || 0;
+              const parts = formatDateParts(e.date || '');
+              const hasLogbook = myFiles.some((f: any) => f.name.startsWith(`Logbook-${e.date}`));
+              const badgeClass = getHoursBadgeColor(eh);
+
+              return (
+                <div key={e.id} className="op-history-card">
+                  {/* Top Row: Day + Hours Badge */}
+                  <div className="op-history-card-top">
+                    <div>
+                      <div className="op-history-day-label">{parts.dayName}</div>
+                      <div className="op-history-date">{parts.formatted}</div>
+                    </div>
+                    <span className={`op-hours-badge ${badgeClass}`}>{eh.toFixed(1)}h</span>
+                  </div>
+
+                  {/* Time Row */}
+                  <div className="op-history-times">
+                    <div className="op-history-time-item">
+                      <span className="op-history-time-label">START TIME</span>
+                      <span className="op-history-time-value">{fmt12(e.startTime)}</span>
+                    </div>
+                    <div className="op-history-time-item">
+                      <span className="op-history-time-label">END TIME</span>
+                      <span className="op-history-time-value">{fmt12(e.endTime)}</span>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="op-history-divider" />
+
+                  {/* Bottom Row: Asset */}
+                  <div className="op-history-asset">
+                    {hasLogbook ? (
+                      <button className="op-history-asset-btn" onClick={() => setViewerFileId(e.id)}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Logbook Attached
+                      </button>
+                    ) : (
+                      <div className="op-history-asset-text">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        No Logbook Attached
+                      </div>
+                    )}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
+
       {viewerFileId && (() => {
-        const fileRecord = myFiles.find((f: any) => f.id === viewerFileId) as any;
+        const entry = myTs.find(e => e.id === viewerFileId);
+        const fileRecord = myFiles.find((f: any) => f.name.startsWith(`Logbook-${entry?.date}`)) as any;
+        if (!fileRecord) return null;
         return (
           <LogbookViewer
             isOpen={!!viewerFileId}
