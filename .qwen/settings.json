@@ -451,7 +451,8 @@
       "Bash(.time-box *)",
       "Bash(find *)",
       "Bash(chmod *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   },
   "$version": 3

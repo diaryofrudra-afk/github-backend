@@ -27,7 +27,6 @@ export function LoggerPage({ active }: { active: boolean }) {
   const myFiles: unknown[] = user ? (files[user] || []) : [];
 
   const h = calcHours(startTime, endTime) || 0;
-  const breakMinutes = h >= 6 ? 30 : 0;
 
   const handleCommit = async () => {
     if (!startTime || !endTime) return showToast('Set start and end times', 'error');
@@ -169,7 +168,7 @@ export function LoggerPage({ active }: { active: boolean }) {
         </button>
       </div>
 
-      {/* Duration Badge */}
+      {/* Total Hours */}
       <div className="logger-duration-badge">
         <span className="logger-duration-dot" />
         <span>{(h || 0).toFixed(1)} HRS</span>
@@ -191,13 +190,6 @@ export function LoggerPage({ active }: { active: boolean }) {
             <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="logger-time-card-input" />
           </div>
         </div>
-      </div>
-
-      {/* Break Info */}
-      <div className="logger-break-row">
-        <div className="logger-break-line" />
-        <span className="logger-break-text">Break: {breakMinutes} MIN</span>
-        <div className="logger-break-line" />
       </div>
 
       {/* Action Buttons */}

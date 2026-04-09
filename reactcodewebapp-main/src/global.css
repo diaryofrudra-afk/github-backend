@@ -35,7 +35,9 @@
   --accent-g: rgba(157, 111, 255, 0.20);
   --accent-s: rgba(157, 111, 255, 0.10);
   --accent-d: rgba(157, 111, 255, 0.04);
-  --accent-grd: linear-gradient(135deg, #9d6fff 0%, #d946ef 100%);
+  --accent-grd: linear-gradient(135deg, #9d6fff 0%, #7c3aed 100%);
+  --accent-grd-dark: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  --accent-solid: #5b21b6;
   --green: #00e5a0;
   --green-g: rgba(0, 229, 160, 0.16);
   --green-s: rgba(0, 229, 160, 0.09);
@@ -8126,7 +8128,7 @@ select:focus {
   font-weight: 700;
   color: #9d6fff;
   letter-spacing: 3px;
-  margin-top: 2px;
+  margin-top: 8px;
 }
 
 .op-att-calendar-nav {
@@ -8252,7 +8254,7 @@ select:focus {
 .op-att-performance-card {
   border-radius: 24px !important;
   padding: 24px 28px !important;
-  background: linear-gradient(135deg, #2a1a5e 0%, #1a0a3e 100%) !important;
+  background: linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%) !important;
   position: relative !important;
   overflow: visible !important;
   margin-bottom: 24px !important;
@@ -8260,7 +8262,7 @@ select:focus {
   width: 100% !important;
   box-sizing: border-box !important;
   z-index: 0 !important;
-  box-shadow: 0 0 30px rgba(157, 111, 255, 0.3), 0 0 60px rgba(124, 58, 237, 0.15) !important;
+  box-shadow: 0 0 30px rgba(91, 33, 182, 0.3), 0 0 60px rgba(91, 33, 182, 0.15) !important;
 }
 
 .op-att-performance-card::before {
@@ -8270,7 +8272,7 @@ select:focus {
   left: -30%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(ellipse at 30% 40%, rgba(157, 111, 255, 0.4), rgba(124, 58, 237, 0.15) 50%, transparent 70%) !important;
+  background: radial-gradient(ellipse at 30% 40%, rgba(157, 111, 255, 0.25), rgba(124, 58, 237, 0.1) 50%, transparent 70%) !important;
   z-index: 0 !important;
   pointer-events: none !important;
   filter: blur(1px);
@@ -8283,7 +8285,7 @@ select:focus {
   right: -40%;
   width: 150%;
   height: 150%;
-  background: radial-gradient(ellipse at 70% 60%, rgba(124, 58, 237, 0.35), rgba(157, 111, 255, 0.1) 50%, transparent 75%) !important;
+  background: radial-gradient(ellipse at 70% 60%, rgba(124, 58, 237, 0.2), rgba(157, 111, 255, 0.08) 50%, transparent 75%) !important;
   z-index: 0 !important;
   pointer-events: none !important;
   filter: blur(3px);
@@ -8350,26 +8352,33 @@ select:focus {
 
 /* ── Current Assignment Card ── */
 .op-hero {
-  background-color: #000000;
-  background-image:
-    repeating-linear-gradient(45deg, transparent, transparent 28px, rgba(157, 111, 255, 0.07) 28px, rgba(157, 111, 255, 0.07) 29px, transparent 29px, transparent 58px),
-    repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(157, 111, 255, 0.07) 28px, rgba(157, 111, 255, 0.07) 29px, transparent 29px, transparent 58px);
-  background-size: 60px 60px, 60px 60px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 24px;
-  padding: 26px 32px 26px 64px;
-  margin-bottom: 40px;
+  background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%);
   position: relative;
   overflow: hidden;
-  box-shadow: none;
+  border-radius: 32px;
+  padding: 32px 24px;
+  margin-bottom: 40px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 20px 40px rgba(46, 16, 101, 0.4);
 }
 
 .op-hero::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 50% 40% at 0% 0%, rgba(157, 111, 255, 0.08), transparent);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.4;
+  background-image: url('https://lh3.googleusercontent.com/aida/ADBb0uhtzwB5cmacZxFhNFKGBvOLDoD6ftwm2S_Z-qVcNBuc1EbowjpG9XRNtDqX93ps7q7F3Vma-z3X26lyCqoV5Mdl7dNFJXEXR2fkLtYiwcLcjR3S3Npsem7tsvCnx4NWhUWfJppk4wWBAO-PPeGTYPf-v8DMIL7w_ghzzK_zfeHe_0m6Mgd_wJUi5ByTZ_4Iu78HWX0MN_RjGNKNhV0xNrTlhFjvPQ-O0cvLs447GT_R9GRrQnolWldO6bLZDW2Q2hNKL8fgpf28lQ');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .op-assign-label {
@@ -8378,19 +8387,19 @@ select:focus {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 3px;
-  color: #9d6fff;
-  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
   position: relative;
 }
 
 .op-assign-reg {
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-  font-size: 36px;
-  font-weight: 700;
+  font-family: var(--fh);
+  font-size: 32px;
+  font-weight: 800;
   color: #ffffff;
   line-height: 1.1;
   position: relative;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
 }
 
 /* ── Shift Logger Title (Purple Header) ── */
@@ -8907,7 +8916,7 @@ select:focus {
   font-weight: 700;
   color: #9d6fff;
   letter-spacing: 3px;
-  margin-top: 2px;
+  margin-top: 8px;
 }
 
 .op-att-calendar-nav {
@@ -9448,20 +9457,36 @@ select:focus {
 
 /* ── Current Assignment Card ── */
 .logger-assignment-card {
-  background-color: #000000;
-  background-image:
-    repeating-linear-gradient(45deg, transparent, transparent 28px, rgba(157, 111, 255, 0.07) 28px, rgba(157, 111, 255, 0.07) 29px, transparent 29px, transparent 58px),
-    repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(157, 111, 255, 0.07) 28px, rgba(157, 111, 255, 0.07) 29px, transparent 29px, transparent 58px);
-  background-size: 60px 60px, 60px 60px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  padding: 18px 24px;
+  background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%);
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  padding: 28px 24px;
   margin: 16px 16px 0;
   max-width: 480px;
   width: calc(100% - 32px);
-  position: relative;
-  overflow: hidden;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   box-sizing: border-box;
+  box-shadow: 0 20px 40px rgba(46, 16, 101, 0.4);
+}
+
+.logger-assignment-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.4;
+  background-image: url('https://lh3.googleusercontent.com/aida/ADBb0uhtzwB5cmacZxFhNFKGBvOLDoD6ftwm2S_Z-qVcNBuc1EbowjpG9XRNtDqX93ps7q7F3Vma-z3X26lyCqoV5Mdl7dNFJXEXR2fkLtYiwcLcjR3S3Npsem7tsvCnx4NWhUWfJppk4wWBAO-PPeGTYPf-v8DMIL7w_ghzzK_zfeHe_0m6Mgd_wJUi5ByTZ_4Iu78HWX0MN_RjGNKNhV0xNrTlhFjvPQ-O0cvLs447GT_R9GRrQnolWldO6bLZDW2Q2hNKL8fgpf28lQ');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .logger-assignment-card .op-assign-label {
@@ -9470,16 +9495,18 @@ select:focus {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2.5px;
-  color: #9d6fff;
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 6px;
+  position: relative;
 }
 
 .logger-assignment-card .op-assign-reg {
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-  font-size: 24px;
-  font-weight: 700;
+  font-family: var(--fh);
+  font-size: 28px;
+  font-weight: 800;
   color: #ffffff;
   line-height: 1.1;
+  position: relative;
   letter-spacing: -0.5px;
 }
 

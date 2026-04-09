@@ -14,17 +14,11 @@ export function BottomNav({ onSignOut }: BottomNavProps) {
 
   // Get operator details
   const operators = state?.operators || [];
-  const operatorProfiles = state?.operatorProfiles || {};
   const currentOperator = userRole === 'operator'
     ? operators.find(op => op.phone === user || String(op.id) === user)
     : null;
-  const opProfile = currentOperator
-    ? (operatorProfiles[currentOperator.phone] || operatorProfiles[String(currentOperator.id)] || {})
-    : {};
   const opName = currentOperator?.name || user || 'User';
   const opPhone = currentOperator?.phone || user || '';
-  const opSalary = (opProfile as Record<string, any>)?.salary || 0;
-  const opWorkDays = (opProfile as Record<string, any>)?.workingDays || 26;
 
   // Calculate attendance stats
   const attendance = state?.attendance || [];
@@ -37,7 +31,6 @@ export function BottomNav({ onSignOut }: BottomNavProps) {
     const att = attendance.find(a => operatorKeys.includes(a.operator_key) && a.date === iso && a.status === 'present');
     if (att) presentCount++;
   }
-  const earnedAmount = opWorkDays > 0 ? Math.round((opSalary / opWorkDays) * presentCount) : 0;
 
   const tabs = [
     {
@@ -107,31 +100,6 @@ export function BottomNav({ onSignOut }: BottomNavProps) {
             <div>
               <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--t1)', fontFamily: 'var(--fh)' }}>{opName}</div>
               <div style={{ fontSize: '11px', color: 'var(--t3)', marginTop: '2px' }}>{opPhone}</div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
-            <div style={{
-              padding: '14px 10px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)',
-              border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#10b981', fontFamily: 'var(--fh)' }}>{presentCount}</div>
-              <div style={{ fontSize: '10px', color: 'var(--t3)', marginTop: '2px', fontWeight: 500 }}>Days Present</div>
-            </div>
-            <div style={{
-              padding: '14px 10px', borderRadius: '12px', background: 'rgba(157,111,255,0.1)',
-              border: '1px solid rgba(157,111,255,0.2)', textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--fh)' }}>₹{earnedAmount.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: '10px', color: 'var(--t3)', marginTop: '2px', fontWeight: 500 }}>Earned</div>
-            </div>
-            <div style={{
-              padding: '14px 10px', borderRadius: '12px', background: 'rgba(245,158,11,0.1)',
-              border: '1px solid rgba(245,158,11,0.2)', textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--fh)' }}>₹{opSalary.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: '10px', color: 'var(--t3)', marginTop: '2px', fontWeight: 500 }}>Monthly Salary</div>
             </div>
           </div>
 

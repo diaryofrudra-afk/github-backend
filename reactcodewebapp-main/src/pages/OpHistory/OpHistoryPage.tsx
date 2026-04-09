@@ -73,17 +73,6 @@ export function OpHistoryPage({ active }: { active: boolean }) {
   return (
     <div className={`page ${active ? 'active' : ''}`} id="page-op-history">
       <div className="op-history-wrap">
-        {/* Section Header */}
-        <div className="op-history-section-header">
-          <span className="op-history-section-title">Recent Logs</span>
-          <button className="op-history-filter-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
-            </svg>
-            Filter
-          </button>
-        </div>
-
         {/* Log Cards */}
         {!myTs.length ? (
           <p className="empty-msg">No shift history yet.</p>

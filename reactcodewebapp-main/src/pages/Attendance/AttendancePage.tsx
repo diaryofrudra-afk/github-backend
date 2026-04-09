@@ -470,22 +470,6 @@ export function AttendancePage({ active }: { active: boolean }) {
 
     return (
       <div className="op-attendance-modern">
-        {/* Stats Cards */}
-        <div className="op-att-stats">
-          <div className="op-att-stat-card">
-            <div className="op-att-stat-num">{presentCount}</div>
-            <div className="op-att-stat-label">PRESENT</div>
-          </div>
-          <div className="op-att-stat-card">
-            <div className="op-att-stat-num">{absentCount}</div>
-            <div className="op-att-stat-label">ABSENT</div>
-          </div>
-          <div className="op-att-stat-card">
-            <div className="op-att-stat-num">₹{totalAdvances.toLocaleString('en-IN')}</div>
-            <div className="op-att-stat-label">ADVANCE RECEIVED</div>
-          </div>
-        </div>
-
         {/* Calendar Card */}
         <div className="op-att-calendar-card">
           <div className="op-att-calendar-header">
@@ -510,6 +494,22 @@ export function AttendancePage({ active }: { active: boolean }) {
           </div>
           <div className="op-att-cal-grid">
             {calCells}
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="op-att-stats">
+          <div className="op-att-stat-card">
+            <div className="op-att-stat-num">{presentCount}</div>
+            <div className="op-att-stat-label">PRESENT</div>
+          </div>
+          <div className="op-att-stat-card">
+            <div className="op-att-stat-num">{absentCount}</div>
+            <div className="op-att-stat-label">ABSENT</div>
+          </div>
+          <div className="op-att-stat-card">
+            <div className="op-att-stat-num">₹{totalAdvances.toLocaleString('en-IN')}</div>
+            <div className="op-att-stat-label">ADVANCE RECEIVED</div>
           </div>
         </div>
       </div>
