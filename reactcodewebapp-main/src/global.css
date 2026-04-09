@@ -1792,14 +1792,6 @@ svg.rupee-icon text {
   overflow: hidden
 }
 
-.op-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 70% 60% at 50% -10%, var(--accent-s), transparent);
-  pointer-events: none
-}
-
 .op-assign-label {
   font-size: 9px;
   font-family: var(--fh);
@@ -8372,13 +8364,13 @@ select:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  opacity: 0.4;
-  background-image: url('https://lh3.googleusercontent.com/aida/ADBb0uhtzwB5cmacZxFhNFKGBvOLDoD6ftwm2S_Z-qVcNBuc1EbowjpG9XRNtDqX93ps7q7F3Vma-z3X26lyCqoV5Mdl7dNFJXEXR2fkLtYiwcLcjR3S3Npsem7tsvCnx4NWhUWfJppk4wWBAO-PPeGTYPf-v8DMIL7w_ghzzK_zfeHe_0m6Mgd_wJUi5ByTZ_4Iu78HWX0MN_RjGNKNhV0xNrTlhFjvPQ-O0cvLs447GT_R9GRrQnolWldO6bLZDW2Q2hNKL8fgpf28lQ');
-  background-size: cover;
+  opacity: 0.15;
+  background-image: url('/warli-art.png');
+  background-size: 100% auto;
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: none;
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
 }
 
 .op-assign-label {
@@ -9480,13 +9472,13 @@ select:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  opacity: 0.4;
-  background-image: url('https://lh3.googleusercontent.com/aida/ADBb0uhtzwB5cmacZxFhNFKGBvOLDoD6ftwm2S_Z-qVcNBuc1EbowjpG9XRNtDqX93ps7q7F3Vma-z3X26lyCqoV5Mdl7dNFJXEXR2fkLtYiwcLcjR3S3Npsem7tsvCnx4NWhUWfJppk4wWBAO-PPeGTYPf-v8DMIL7w_ghzzK_zfeHe_0m6Mgd_wJUi5ByTZ_4Iu78HWX0MN_RjGNKNhV0xNrTlhFjvPQ-O0cvLs447GT_R9GRrQnolWldO6bLZDW2Q2hNKL8fgpf28lQ');
-  background-size: cover;
+  opacity: 0.15;
+  background-image: url('/warli-art.png');
+  background-size: 100% auto;
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: none;
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
 }
 
 .logger-assignment-card .op-assign-label {
