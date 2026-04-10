@@ -7917,9 +7917,10 @@ select:focus {
 
 .op-history-times {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   padding: 16px 20px 0;
+  position: relative;
 }
 
 .op-history-time-item {
@@ -7934,11 +7935,14 @@ select:focus {
 }
 
 .op-history-time-connector {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding-top: 18px;
 }
 
 .op-history-time-connector-line {
@@ -8720,9 +8724,10 @@ select:focus {
 
 .op-history-times {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   padding: 16px 20px 0;
+  position: relative;
 }
 
 .op-history-time-item {
@@ -8737,11 +8742,14 @@ select:focus {
 }
 
 .op-history-time-connector {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding-top: 18px;
 }
 
 .op-history-time-connector-line {
