@@ -7936,10 +7936,9 @@ select:focus {
 
 .op-history-time-connector {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   gap: 4px;
-  align-self: end;
 }
 
 .op-history-time-connector-line {
@@ -8740,10 +8739,9 @@ select:focus {
 
 .op-history-time-connector {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   gap: 4px;
-  align-self: end;
 }
 
 .op-history-time-connector-line {
