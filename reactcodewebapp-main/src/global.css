@@ -8028,7 +8028,7 @@ select:focus {
   padding: 7px 12px;
   border-radius: 10px;
   border: none;
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
@@ -8037,7 +8037,7 @@ select:focus {
 }
 
 .op-history-asset-btn:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .op-history-asset-text {
@@ -8831,7 +8831,7 @@ select:focus {
   padding: 7px 12px;
   border-radius: 10px;
   border: none;
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
@@ -8840,7 +8840,7 @@ select:focus {
 }
 
 .op-history-asset-btn:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .op-history-asset-text {
