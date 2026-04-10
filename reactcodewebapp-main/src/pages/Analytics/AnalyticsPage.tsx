@@ -38,7 +38,7 @@ function DeployRing({ pct }: { pct: number }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const cs = getComputedStyle(document.documentElement);
-    const accent = cs.getPropertyValue('--accent').trim() || '#9d6fff';
+    const accent = cs.getPropertyValue('--accent').trim() || '#E8732A';
     const track = cs.getPropertyValue('--bg4').trim() || '#171728';
     const W = canvas.width, H = canvas.height;
     const cx = W / 2, cy = H / 2, r = W * 0.37, lw = W * 0.115;
@@ -180,7 +180,7 @@ export function AnalyticsPage({ active }: { active: boolean }) {
     }
     pts.reduce((s, p) => s + p.v, 0); // Calculate total for side-effects if any, or remove if truly unused
     const cs = getComputedStyle(document.documentElement);
-    const accent = cs.getPropertyValue('--accent').trim() || '#9d6fff';
+    const accent = cs.getPropertyValue('--accent').trim() || '#E8732A';
     return {
       labels: pts.map(p => p.l),
       datasets: [{

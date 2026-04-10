@@ -27,7 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   moving: '#22c55e',
   stopped: '#ef4444',
   wire_disconnected: '#f59e0b',
-  signal_lost: '#8b5cf6',
+  signal_lost: '#E8732A',
 };
 
 function statusColor(status: string): string {

@@ -21,7 +21,7 @@ export function LineChart({ data, options, height, gradient = false }: LineChart
     if (!ctx || !area) return;
 
     const cs = getComputedStyle(document.documentElement);
-    const accent = cs.getPropertyValue('--accent').trim() || '#9d6fff';
+    const accent = cs.getPropertyValue('--accent').trim() || '#E8732A';
 
     chart.data.datasets.forEach(ds => {
       const grad = ctx.createLinearGradient(0, area.top, 0, area.bottom);
@@ -53,7 +53,7 @@ export function LineChart({ data, options, height, gradient = false }: LineChart
         backgroundColor: tooltipBg,
         titleColor: tooltipText,
         bodyColor: tooltipText,
-        borderColor: 'rgba(157, 111, 255, 0.3)',
+        borderColor: 'rgba(232, 115, 42, 0.3)',
         borderWidth: 1,
         titleFont: { size: 11, weight: 'bold' },
         bodyFont: { size: 12 },

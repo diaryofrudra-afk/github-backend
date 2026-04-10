@@ -70,9 +70,9 @@
 }
 
 .auth-container button:hover:not(:disabled) {
-  background-color: var(--accent-hover, #7b4fd9);
+  background-color: var(--accent-hover, #EC7A2D);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(157, 111, 255, 0.3);
+  box-shadow: 0 5px 15px rgba(232, 115, 42, 0.3);
 }
 
 .auth-container button:disabled {
@@ -110,7 +110,7 @@
 
 .auth-container input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(157, 111, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(232, 115, 42, 0.1);
 }
 
 .auth-container input:disabled {
@@ -182,7 +182,7 @@
 }
 
 .toggle {
-  background: linear-gradient(135deg, var(--accent) 0%, #7b4fd9 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #EC7A2D 100%);
   height: 100%;
   color: #fff;
   position: relative;
@@ -340,9 +340,9 @@
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: var(--accent-hover, #7b4fd9);
+  background-color: var(--accent-hover, #EC7A2D);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(157, 111, 255, 0.3);
+  box-shadow: 0 5px 15px rgba(232, 115, 42, 0.3);
 }
 
 .submit-btn:disabled {

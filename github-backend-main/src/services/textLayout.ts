@@ -1,5 +1,5 @@
 import { createCanvas } from 'canvas';
-import * as pretext from '../lib/pretext/layout';
+import * as pretext from '../lib/pretext/layout.js';
 
 // Polyfill for Node.js environment if Pretext needs global access
 // Pretext's getMeasureContext() checks for OffscreenCanvas and document.
@@ -25,14 +25,14 @@ export class TextLayoutService {
      */
     static measure(text: string, options: TextLayoutOptions) {
         const { font, maxWidth, lineHeight, whiteSpace = 'normal' } = options;
-        
+
         try {
             const prepared = pretext.prepare(text, font, { whiteSpace });
             return pretext.layout(prepared, maxWidth, lineHeight);
         } catch (e) {
             console.error('Backend Pretext measurement failed:', e);
             // Basic fallback based on average character width if pretext fails
-            const avgCharWidth = 8; 
+            const avgCharWidth = 8;
             const charsPerLine = Math.floor(maxWidth / avgCharWidth);
             const lineCount = Math.ceil(text.length / charsPerLine);
             return {
@@ -47,7 +47,7 @@ export class TextLayoutService {
      */
     static getLines(text: string, options: TextLayoutOptions) {
         const { font, maxWidth, lineHeight, whiteSpace = 'normal' } = options;
-        
+
         try {
             const prepared = pretext.prepareWithSegments(text, font, { whiteSpace });
             return pretext.layoutWithLines(prepared, maxWidth, lineHeight);
