@@ -101,6 +101,11 @@ export function OpHistoryPage({ active }: { active: boolean }) {
                       <span className="op-history-time-label">START TIME</span>
                       <span className="op-history-time-value">{fmt12(e.startTime)}</span>
                     </div>
+                    <div className="op-history-time-connector">
+                      <div className="op-history-time-connector-line" />
+                      <div className="op-history-time-connector-dot" />
+                      <div className="op-history-time-connector-line" />
+                    </div>
                     <div className="op-history-time-item">
                       <span className="op-history-time-label">END TIME</span>
                       <span className="op-history-time-value">{fmt12(e.endTime)}</span>
