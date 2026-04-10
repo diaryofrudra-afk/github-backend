@@ -7920,7 +7920,7 @@ select:focus {
   grid-template-columns: 1fr auto 1fr;
   gap: 20px;
   padding: 16px 20px 0;
-  align-items: center;
+  align-items: end;
 }
 
 .op-history-time-item {
@@ -8723,7 +8723,7 @@ select:focus {
   grid-template-columns: 1fr auto 1fr;
   gap: 20px;
   padding: 16px 20px 0;
-  align-items: center;
+  align-items: end;
 }
 
 .op-history-time-item {
