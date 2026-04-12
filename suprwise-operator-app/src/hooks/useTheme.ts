@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Theme } from '../types';
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem('rudra_theme') as Theme) || 'dark'
-  );
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

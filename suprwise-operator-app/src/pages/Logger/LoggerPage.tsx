@@ -22,14 +22,180 @@ function fmtTimeSplit(t: string): { time: string; ampm: string } {
 const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Morning';
+  if (h < 17) return 'Afternoon';
+  return 'Evening';
+}
+
+function timeAgo(isoOrTs: string | number): string {
+  const ms = typeof isoOrTs === 'number' ? isoOrTs : new Date(isoOrTs).getTime();
+  const diff = Date.now() - ms;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+const NOTIF_READ_KEY = 'suprwise_notif_read_ts';
+
 export function LoggerPage({ active }: { active: boolean }) {
-  const { state, setState, showToast, user } = useApp();
+  const { state, setState, showToast, user, setLastShiftSaved } = useApp();
   const { cranes, timesheets, files } = state;
+
+  // Operator name for greeting
+  const operators = state?.operators || [];
+  const currentOp = operators.find((op: any) => op.phone === user || String(op.id) === user);
+  const opFirstName = currentOp?.name ? currentOp.name.split(' ')[0] : null;
 
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
   const [viewerFileId, setViewerFileId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [lastReadTs, setLastReadTs] = useState<number>(
+    () => Number(localStorage.getItem(NOTIF_READ_KEY) || 0)
+  );
+
+  // Build notifications from state
+  const notifications = (() => {
+    const items: { id: string; icon: string; color: string; text: string; ts: number }[] = [];
+    const uid = user || '';
+
+    // Logbook entries (files)
+    const myFileList: any[] = uid ? (files[uid] || []) : [];
+    myFileList.slice(0, 3).forEach(f => {
+      const date = f.name?.match(/\d{4}-\d{2}-\d{2}/)?.[0] || 'recent';
+      items.push({
+        id: `file-${f.id}`,
+        icon: '📋',
+        color: '#EC7A2D',
+        text: `Logbook uploaded for ${date}`,
+        ts: f.timestamp ? new Date(f.timestamp).getTime() : Date.now() - 3600000,
+      });
+    });
+
+    // Attendance updates
+    const attendance = state?.attendance || [];
+    const myAtt = attendance
+      .filter((a: any) => a.operator_key === uid || a.operator_key === currentOp?.phone)
+      .slice(0, 2);
+    myAtt.forEach((a: any) => {
+      items.push({
+        id: `att-${a.id || a.date}`,
+        icon: '✅',
+        color: '#22c55e',
+        text: `Attendance marked ${a.status} for ${a.date}`,
+        ts: a.date ? new Date(a.date).getTime() : Date.now() - 7200000,
+      });
+    });
+
+    // Advance salary updates
+    const advMap = (state?.advancePayments || {}) as Record<string, any[]>;
+    const myAdvances: any[] = Array.isArray(advMap[uid]) ? (advMap[uid] as any[]) : Array.isArray(advMap[currentOp?.phone || '']) ? (advMap[currentOp?.phone || ''] as any[]) : [];
+    myAdvances.slice(0, 2).forEach(a => {
+      items.push({
+        id: `adv-${a.id}`,
+        icon: '💰',
+        color: '#f59e0b',
+        text: `Advance of ₹${Number(a.amount).toLocaleString('en-IN')} recorded for ${a.date}`,
+        ts: a.date ? new Date(a.date).getTime() : Date.now() - 86400000,
+      });
+    });
+
+    // Sort newest first
+    return items.sort((a, b) => b.ts - a.ts);
+  })();
+
+  const unreadCount = notifications.filter(n => n.ts > lastReadTs).length;
+
+  function handleNotifOpen() {
+    setNotifOpen(v => !v);
+  }
+  function handleMarkAllRead() {
+    const now = Date.now();
+    localStorage.setItem(NOTIF_READ_KEY, String(now));
+    setLastReadTs(now);
+  }
+
+  const SWIPE_REVEAL = 76; // px — width of the delete zone
+  const dragRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    el: HTMLElement | null;
+    isHorizontal: boolean | null;
+  }>({ id: '', startX: 0, startY: 0, el: null, isHorizontal: null });
+
+  function handleSwipeTouchStart(id: string, ev: React.TouchEvent<HTMLDivElement>) {
+    dragRef.current = {
+      id,
+      startX: ev.touches[0].clientX,
+      startY: ev.touches[0].clientY,
+      el: ev.currentTarget,
+      isHorizontal: null,
+    };
+    ev.currentTarget.style.transition = 'none';
+  }
+
+  function handleSwipeTouchMove(id: string, ev: React.TouchEvent<HTMLDivElement>) {
+    const { startX, startY, el } = dragRef.current;
+    if (!el || dragRef.current.id !== id) return;
+    const dx = ev.touches[0].clientX - startX;
+    const dy = ev.touches[0].clientY - startY;
+
+    if (dragRef.current.isHorizontal === null) {
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+        dragRef.current.isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      return;
+    }
+    if (!dragRef.current.isHorizontal) return;
+
+    const base = openSwipeId === id ? -SWIPE_REVEAL : 0;
+    const offset = Math.min(0, Math.max(-(SWIPE_REVEAL + 16), base + dx));
+    el.style.transform = `translateX(${offset}px)`;
+  }
+
+  function handleSwipeTouchEnd(id: string, ev: React.TouchEvent<HTMLDivElement>) {
+    const { startX, el, isHorizontal } = dragRef.current;
+    if (!el || !isHorizontal) return;
+    const dx = ev.changedTouches[0].clientX - startX;
+    const base = openSwipeId === id ? -SWIPE_REVEAL : 0;
+    const finalOffset = base + dx;
+
+    el.style.transition = 'transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)';
+    if (finalOffset < -(SWIPE_REVEAL * 0.35)) {
+      el.style.transform = `translateX(-${SWIPE_REVEAL}px)`;
+      setOpenSwipeId(id);
+    } else {
+      el.style.transform = 'translateX(0)';
+      setOpenSwipeId(null);
+    }
+  }
+
+  async function handleDeleteEntry(entryId: string) {
+    const uid = user || '';
+    setState(prev => ({
+      ...prev,
+      timesheets: {
+        ...prev.timesheets,
+        [uid]: (prev.timesheets[uid] || []).filter(t => t.id !== entryId),
+      },
+    }));
+    setOpenSwipeId(null);
+    showToast('Entry deleted');
+    try {
+      await api.deleteTimesheet(entryId);
+    } catch {
+      // entry already removed from local state; server may retry on next sync
+    }
+  }
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +260,16 @@ export function LoggerPage({ active }: { active: boolean }) {
         hours_decimal: h,
         operator_id: user || undefined,
       });
+      // Explicitly mark attendance — belt-and-suspenders alongside the
+      // backend's auto-upsert in POST /timesheets
+      await api.markAttendance({
+        operator_key: user || '',
+        date: dateISO,
+        status: 'present',
+        marked_by: 'operator',
+      });
+      // Signal AttendancePage to bypass its 15-second cache and re-fetch
+      setLastShiftSaved(Date.now());
     } catch {
       showToast('Failed to sync to server', 'error');
     }
@@ -156,20 +332,81 @@ export function LoggerPage({ active }: { active: boolean }) {
   const monthIdx = selectedDate.getMonth();
   const dayNum = selectedDate.getDate();
   const dateLabel = `${DAY_NAMES[dayIdx]}, ${MONTH_NAMES[monthIdx]} ${dayNum}`;
-  const isToday = todayISO() === selectedDate.toISOString().split('T')[0];
+  const selectedISO = selectedDate.toISOString().split('T')[0];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
+  const dayDiff = Math.round((today.getTime() - sel.getTime()) / 86400000);
+  const isToday = dayDiff === 0;
+  const dateSublabel = dayDiff === 0 ? 'TODAY' : dayDiff === 1 ? 'YESTERDAY' : dayDiff === 2 ? 'DAY BEFORE YESTERDAY' : '';
 
   const startSplit = fmtTimeSplit(startTime);
   const endSplit = fmtTimeSplit(endTime);
 
   return (
     <div className={`page ${active ? 'active' : ''} logger-page-modern`} id="page-logger">
-      {/* Current Assignment Card */}
-      {assigned && (
-        <div className="logger-assignment-card">
-          <div className="op-assign-label">Current Assignment</div>
-          <div className="op-assign-reg">{assigned.reg}</div>
-        </div>
+      {/* Dismiss layer for notification panel */}
+      {notifOpen && (
+        <div className="notif-dismiss" onClick={() => setNotifOpen(false)} />
       )}
+
+      {/* Top Header */}
+      <div className="logger-top-header">
+        <div className="logger-top-greeting">
+          <span className="logger-top-hello">Good {getGreeting()}</span>
+          <span className="logger-top-name">{opFirstName || 'Operator'}</span>
+        </div>
+        <div className="logger-notif-wrap">
+          <button className="logger-notif-btn" aria-label="Notifications" onClick={handleNotifOpen}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {unreadCount > 0 && <span className="notif-dot" />}
+          </button>
+
+          {/* Notification panel */}
+          <div className={`notif-panel${notifOpen ? ' open' : ''}`}>
+            <div className="notif-panel-header">
+              <span className="notif-panel-title">NOTIFICATIONS</span>
+              <button className="notif-mark-read" onClick={handleMarkAllRead}>Mark all as read</button>
+            </div>
+
+            <div className="notif-list">
+              {notifications.length === 0 ? (
+                <div className="notif-empty">No notifications yet</div>
+              ) : (
+                notifications.map(n => {
+                  const isUnread = n.ts > lastReadTs;
+                  return (
+                    <div key={n.id} className={`notif-item${isUnread ? ' unread' : ''}`}>
+                      <div className="notif-icon" style={{ background: n.color + '22', color: n.color }}>
+                        {n.icon}
+                      </div>
+                      <div className="notif-content">
+                        <div className="notif-text">{n.text}</div>
+                        <div className="notif-time">{timeAgo(n.ts)}</div>
+                      </div>
+                      {isUnread && <div className="notif-unread-dot" />}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <button className="notif-view-all" onClick={() => setNotifOpen(false)}>
+              View All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Current Assignment Card */}
+      <div className="logger-assignment-card">
+        <div className="op-assign-label">Current Assignment</div>
+        <div className={`op-assign-reg${!assigned ? ' unassigned' : ''}`}>
+          {assigned ? assigned.reg : 'Not Assigned'}
+        </div>
+      </div>
 
       {/* Date Navigation */}
       <div className="logger-date-nav">
@@ -180,9 +417,9 @@ export function LoggerPage({ active }: { active: boolean }) {
         </button>
         <div className="logger-date-center">
           <h1 className="logger-date-text">{dateLabel}</h1>
-          <p className="logger-date-sub">{isToday ? 'TODAY' : ''}</p>
+          <p className="logger-date-sub">{dateSublabel}</p>
         </div>
-        <button className="logger-date-arrow" onClick={() => shiftDate(1)}>
+        <button className="logger-date-arrow" onClick={() => shiftDate(1)} disabled={isToday}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
@@ -246,7 +483,6 @@ export function LoggerPage({ active }: { active: boolean }) {
       <div className="logger-today-entries">
         <div className="logger-entries-header">
           <h2>TODAY'S ENTRIES <span className="logger-entries-count">({todayEntries.length})</span></h2>
-          <button className="logger-view-all">VIEW ALL</button>
         </div>
         {todayEntries.length > 0 ? (
           <div className="logger-entries-cards">
@@ -256,7 +492,29 @@ export function LoggerPage({ active }: { active: boolean }) {
               const endS = fmtTimeSplit(e.endTime);
               const hasLogbook = myFiles.some((f: any) => f.name?.includes(e.date));
               return (
-                <div key={e.id} className="logger-entry-card">
+                <div key={e.id} className="logger-entry-swipe-wrapper">
+                  {/* Delete zone revealed on swipe-left */}
+                  <button
+                    className="logger-entry-delete-zone"
+                    onClick={() => handleDeleteEntry(e.id)}
+                    aria-label="Delete entry"
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                  </button>
+
+                  {/* Swipeable card surface */}
+                  <div
+                    className="logger-entry-card"
+                    onTouchStart={ev => handleSwipeTouchStart(e.id, ev)}
+                    onTouchMove={ev => handleSwipeTouchMove(e.id, ev)}
+                    onTouchEnd={ev => handleSwipeTouchEnd(e.id, ev)}
+                    onClick={() => { if (openSwipeId === e.id) { setOpenSwipeId(null); } }}
+                  >
                   {idx > 0 && <div className="logger-entry-divider" />}
 
                   {/* Top row: START | hours + progress | END */}
@@ -292,7 +550,10 @@ export function LoggerPage({ active }: { active: boolean }) {
                   {/* Bottom row: logbook attachment pill */}
                   <div className="logger-entry-bottom-row">
                     {hasLogbook ? (
-                      <button className="logger-entry-logbook-pill" onClick={() => setViewerFileId(e.id)}>
+                      <button className="logger-entry-logbook-pill" onClick={() => {
+                        const matchedFile = myFiles.find((f: any) => f.name?.includes(e.date)) as any;
+                        if (matchedFile) setViewerFileId(matchedFile.id);
+                      }}>
                         <div className="logger-pill-icon logger-pill-icon-doc">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EC7A2D" strokeWidth="2" strokeLinecap="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -327,6 +588,7 @@ export function LoggerPage({ active }: { active: boolean }) {
                     )}
                   </div>
                 </div>
+              </div>
               );
             })}
           </div>
