@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from './context/AppContext';
 import { BottomNav } from './components/layout/BottomNav';
 import { ToastContainer } from './components/ui/Toast';
@@ -16,10 +16,12 @@ export default function App() {
   const {
     activePage, setActivePage,
     user, setUser, setUserRole,
-    setState, clearUserData,
+    setState, clearUserData, showToast,
   } = useApp();
+  const [loading, setLoading] = useState(false);
 
   function loadDataFromAPI() {
+    setLoading(true);
     // Reset to empty state first — never show stale data
     setState(() => ({
       cranes: [], operators: [], operatorProfiles: {},
@@ -83,7 +85,12 @@ export default function App() {
           operatorProfiles: (raw.operatorProfiles || prev.operatorProfiles) as typeof prev.operatorProfiles,
         }));
       })
-      .catch(() => { /* ignore — localStorage fallback is fine */ });
+      .catch(() => {
+        showToast('Could not reach server. Check your connection.', 'error');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   // On mount: if a token exists, restore the session via /auth/me
@@ -116,6 +123,13 @@ export default function App() {
   // ── Authenticated (Operator only) ──
   return (
     <div id="app-shell" className={`visible operator-mode`}>
+      {loading && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: '3px',
+          background: 'var(--accent)', zIndex: 9999,
+          animation: 'loadingBar 1.5s ease-in-out infinite',
+        }} />
+      )}
       <div className="body-split">
         <div className="page-content">
           <ErrorBoundary><LoggerPage active={activePage === 'logger'} /></ErrorBoundary>

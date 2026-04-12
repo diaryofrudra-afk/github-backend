@@ -332,7 +332,6 @@ export function LoggerPage({ active }: { active: boolean }) {
   const monthIdx = selectedDate.getMonth();
   const dayNum = selectedDate.getDate();
   const dateLabel = `${DAY_NAMES[dayIdx]}, ${MONTH_NAMES[monthIdx]} ${dayNum}`;
-  const selectedISO = selectedDate.toISOString().split('T')[0];
   const today = new Date(); today.setHours(0,0,0,0);
   const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
   const dayDiff = Math.round((today.getTime() - sel.getTime()) / 86400000);

@@ -25,17 +25,15 @@ export function LogbookViewer({ isOpen, onClose, fileDataUrl, fileName, onUpdate
   };
 
   return (
-    <div className="logbook-viewer-overlay">
-      <div className="logbook-viewer-header">
-        <div className="logbook-viewer-title">
-          {fileName || 'Logbook Scan'}
-        </div>
-        <button className="logbook-viewer-close" onClick={onClose}>
-          ✕
-        </button>
-      </div>
+    <div className="logbook-viewer-overlay" onClick={onClose}>
+      <button className="logbook-viewer-close" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
 
-      <div className="logbook-viewer-image-container">
+      <div className="logbook-viewer-image-container" onClick={e => e.stopPropagation()}>
         {fileDataUrl ? (
           fileDataUrl.startsWith('data:application/pdf') ? (
             <iframe src={fileDataUrl} className="logbook-viewer-iframe" title={fileName || 'Document'} />

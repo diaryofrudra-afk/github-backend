@@ -30,6 +30,8 @@ interface AppContextValue {
   showToast: (msg: string, type?: Toast['type']) => void;
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
+  lastShiftSaved: number;
+  setLastShiftSaved: (ts: number) => void;
 }
 
 const defaultOwnerProfile: OwnerProfile = {
@@ -100,6 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [appState, setAppState] = useState<AppState>(emptyState);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [lastShiftSaved, setLastShiftSaved] = useState(0);
 
   const setUser = (u: string | null) => {
     setUserState(u);
@@ -149,6 +152,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       state: appState, setState: setAppState, save, clearUserData,
       toasts, showToast,
       settingsOpen, setSettingsOpen,
+      lastShiftSaved, setLastShiftSaved,
     }}>
       {children}
     </AppContext.Provider>

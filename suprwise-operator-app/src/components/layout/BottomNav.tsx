@@ -6,7 +6,7 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ onSignOut }: BottomNavProps) {
-  const { activePage, setActivePage, theme, toggleTheme, setSettingsOpen, user, userRole, state } = useApp();
+  const { activePage, setActivePage, toggleTheme, setSettingsOpen, user, userRole, state } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Get operator details

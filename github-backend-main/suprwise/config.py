@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     FAST2SMS_API_KEY: str = ""
     FAST2SMS_SENDER_ID: str = "FSTSMS"  # Default sender ID for Dev API
     SMS_OTP_LENGTH: int = 6
-    SMS_OTP_EXPIRY_MINUTES: int = 10
-    SMS_OTP_MAX_ATTEMPTS: int = 3
+    SMS_OTP_EXPIRY_MINUTES: int = 60  # Increased for easier testing
+    SMS_OTP_MAX_ATTEMPTS: int = 5  # Increased from 3 for testing
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""

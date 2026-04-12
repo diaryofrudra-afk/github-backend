@@ -481,7 +481,12 @@
       "Bash(ps *)",
       "Bash(python *)",
       "Bash(pip install *)",
-      "Bash(pip3 install *)"
+      "Bash(pip3 install *)",
+      "Bash(true)",
+      "Bash(pgrep *)",
+      "Bash(netstat *)",
+      "Bash(open *)",
+      "WebFetch(localhost)"
     ]
   },
   "$version": 3
