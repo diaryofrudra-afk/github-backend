@@ -4,6 +4,7 @@ from ..auth.dependencies import get_current_user
 from ..database import get_db
 from .service import fetch_blackbuck_telemetry, clear_credentials_cache
 from .crypto import encrypt_token
+from .auto_login import blackbuck_headless_login
 import asyncio
 import uuid
 
@@ -160,6 +161,67 @@ async def delete_blackbuck_credentials(
     await db.commit()
     clear_credentials_cache(user["user_id"])
     return {"ok": True, "message": "Credentials removed"}
+
+
+class BlackbuckAutoLoginReq(BaseModel):
+    username: str   # Phone number or email used for Blackbuck login
+    password: str
+
+
+@router.post("/blackbuck/auto-login")
+async def blackbuck_auto_login(
+    req: BlackbuckAutoLoginReq,
+    user=Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """
+    Headless-browser auto-login to Blackbuck.
+    Fills credentials, extracts accessToken + fleet_owner_id, and stores them encrypted.
+    Returns the same response as PUT /blackbuck/credentials on success.
+    """
+    login_result = await blackbuck_headless_login(req.username, req.password)
+
+    if not login_result["success"]:
+        raise HTTPException(status_code=400, detail=login_result.get("error", "Blackbuck auto-login failed."))
+
+    auth_token: str = login_result["auth_token"]
+    fleet_owner_id: str = login_result.get("fleet_owner_id") or ""
+
+    if not fleet_owner_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Login succeeded but could not retrieve fleet_owner_id. "
+                   "Please check Blackbuck profile API access.",
+        )
+
+    encrypted = encrypt_token(auth_token)
+
+    try:
+        cursor = await db.execute(
+            "SELECT id FROM blackbuck_credentials WHERE user_id = ?", (user["user_id"],)
+        )
+        existing = await cursor.fetchone()
+    except Exception:
+        existing = None
+
+    if existing:
+        await db.execute(
+            "UPDATE blackbuck_credentials SET auth_token_encrypted = ?, fleet_owner_id = ?, updated_at = datetime('now') WHERE user_id = ?",
+            (encrypted, fleet_owner_id, user["user_id"]),
+        )
+    else:
+        await db.execute(
+            "INSERT INTO blackbuck_credentials (id, user_id, tenant_id, auth_token_encrypted, fleet_owner_id) VALUES (?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), user["user_id"], user["tenant_id"], encrypted, fleet_owner_id),
+        )
+    await db.commit()
+    clear_credentials_cache(user["user_id"])
+
+    return {
+        "ok": True,
+        "message": "Blackbuck credentials saved via auto-login",
+        "fleet_owner_id": fleet_owner_id,
+    }
 
 
 @router.websocket("/ws/blackbuck")

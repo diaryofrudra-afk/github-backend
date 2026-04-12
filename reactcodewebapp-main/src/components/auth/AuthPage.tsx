@@ -93,11 +93,16 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
     setAuthError('');
     setAuthLoading(true);
     try {
-      const purpose = mode === 'register' ? 'registration' : 'login';
-      const resp = await api.sendSmsOtp(phone, purpose);
+      let expiresInMinutes = 10;
+      if (mode === 'register') {
+        const resp = await api.sendSmsOtp(phone, 'registration');
+        expiresInMinutes = resp.expires_in_minutes || 10;
+      } else {
+        const resp = await api.sendLoginOtp(phone);
+        expiresInMinutes = resp.expires_in_minutes || 10;
+      }
       setOtpRequested(true);
-      const mins = resp.expires_in_minutes || 10;
-      startOtpTimer(mins);
+      startOtpTimer(expiresInMinutes);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Failed to send OTP');
     } finally {
