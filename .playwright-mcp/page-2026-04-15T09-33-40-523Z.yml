@@ -1,0 +1,372 @@
+- generic [ref=e44]:
+  - generic [ref=e45]:
+    - complementary [ref=e46]:
+      - generic [ref=e47]:
+        - img [ref=e49]
+        - generic [ref=e54]: Suprwise
+        - button "Collapse sidebar" [ref=e55] [cursor=pointer]:
+          - img [ref=e56]
+      - navigation [ref=e58]:
+        - generic: Command
+        - list [ref=e60]:
+          - listitem [ref=e61]:
+            - link "Fleet" [ref=e62] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e64]
+              - generic [ref=e69]: Fleet
+          - listitem [ref=e70]:
+            - link "Analytics" [ref=e71] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e73]
+              - generic [ref=e75]: Analytics
+          - listitem [ref=e76]:
+            - link "Billing" [ref=e77] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e79]
+              - generic [ref=e82]: Billing
+          - listitem [ref=e83]:
+            - link "Live GPS" [active] [ref=e84] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e86]
+              - generic [ref=e89]: Live GPS
+          - listitem [ref=e90]:
+            - link "Fuel" [ref=e91] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e93]
+              - generic [ref=e96]: Fuel
+          - listitem [ref=e97]:
+            - link "Cameras" [ref=e98] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e100]
+              - generic [ref=e103]: Cameras
+          - listitem [ref=e104]:
+            - link "Diagnostics" [ref=e105] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e107]
+              - generic [ref=e109]: Diagnostics
+        - generic: Manage
+        - list [ref=e111]:
+          - listitem [ref=e112]:
+            - link "Operators" [ref=e113] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e115]
+              - generic [ref=e120]: Operators
+          - listitem [ref=e121]:
+            - link "Earnings" [ref=e122] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e124]
+              - generic [ref=e128]: Earnings
+          - listitem [ref=e129]:
+            - link "Attendance" [ref=e130] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e132]
+              - generic [ref=e135]: Attendance
+      - generic [ref=e136]:
+        - generic [ref=e140]:
+          - paragraph [ref=e141]: Rudra
+          - paragraph [ref=e142]: Owner
+        - generic [ref=e143]:
+          - button "Settings" [ref=e144] [cursor=pointer]:
+            - img [ref=e145]
+          - button "Toggle theme" [ref=e148] [cursor=pointer]:
+            - img [ref=e149]
+          - button "Logout" [ref=e155] [cursor=pointer]:
+            - img [ref=e156]
+    - generic [ref=e810]:
+      - generic [ref=e811]:
+        - generic:
+          - generic:
+            - button [ref=e812] [cursor=pointer]
+            - button [ref=e815] [cursor=pointer]
+            - button [ref=e818] [cursor=pointer]
+            - button [ref=e821] [cursor=pointer]
+            - button [ref=e824] [cursor=pointer]
+            - button [ref=e827] [cursor=pointer]
+            - button [ref=e830] [cursor=pointer]
+            - button [ref=e833] [cursor=pointer]
+      - generic [ref=e836]:
+        - generic [ref=e838]:
+          - generic [ref=e839]:
+            - paragraph [ref=e840]: Connected
+            - paragraph [ref=e841]:
+              - text: "8"
+              - generic [ref=e842]: /9
+          - generic [ref=e843]:
+            - paragraph [ref=e844]: Engine On
+            - paragraph [ref=e845]:
+              - text: "2"
+              - generic [ref=e846]: /9
+        - generic [ref=e847]:
+          - button "layers" [ref=e848] [cursor=pointer]:
+            - generic [ref=e849]: layers
+          - button "my_location" [ref=e850] [cursor=pointer]:
+            - generic [ref=e851]: my_location
+          - button "settings" [ref=e852] [cursor=pointer]:
+            - generic [ref=e853]: settings
+          - generic [ref=e854]:
+            - button "add" [ref=e855] [cursor=pointer]:
+              - generic [ref=e856]: add
+            - button "remove" [ref=e857] [cursor=pointer]:
+              - generic [ref=e858]: remove
+      - generic [ref=e859]:
+        - generic [ref=e860]:
+          - generic [ref=e861]:
+            - heading "Active Fleet" [level=2] [ref=e862]
+            - generic [ref=e863]:
+              - button "sync" [ref=e864] [cursor=pointer]:
+                - generic [ref=e865]: sync
+              - button "add" [ref=e866] [cursor=pointer]:
+                - generic [ref=e867]: add
+          - generic [ref=e868]:
+            - generic: filter_list
+            - textbox "Filter by status or group..." [ref=e869]
+        - generic [ref=e870]:
+          - generic [ref=e873] [cursor=pointer]:
+            - generic [ref=e874]:
+              - generic [ref=e875]:
+                - generic [ref=e876]: local_shipping
+                - generic [ref=e877]: OD02AS8409
+              - generic [ref=e878]: CONNECTED
+            - paragraph [ref=e879]: Mancheswar Station Road, Rangamatia, Mancheswar, Central Division, Odisha, 751017, India
+            - generic [ref=e880]:
+              - generic [ref=e881]:
+                - generic [ref=e882]:
+                  - generic [ref=e883]: schedule
+                  - text: Just now
+                - generic [ref=e884]:
+                  - generic [ref=e885]: precision_manufacturing
+                  - text: STOPPED
+              - button "History" [ref=e887]
+          - generic [ref=e890] [cursor=pointer]:
+            - generic [ref=e891]:
+              - generic [ref=e892]:
+                - generic [ref=e893]: warning
+                - generic [ref=e894]: OR02AP3339
+              - generic [ref=e895]: WIRE DISCONNECTED
+            - paragraph [ref=e896]: Critical Alert • Ichhapur Zero Point Jajpur Road, Ichhapur, Central Division, Odisha, 755011, India
+            - generic [ref=e897]:
+              - generic [ref=e898]:
+                - generic [ref=e899]:
+                  - generic [ref=e900]: schedule
+                  - text: 350d ago
+                - generic [ref=e901]:
+                  - generic [ref=e902]: error
+                  - text: STALLED
+              - button "History" [ref=e904]
+          - generic [ref=e907] [cursor=pointer]:
+            - generic [ref=e908]:
+              - generic [ref=e909]:
+                - generic [ref=e910]: local_shipping
+                - generic [ref=e911]: OD02CX4940
+              - generic [ref=e912]: CONNECTED
+            - paragraph [ref=e913]: at, Nimidha, Northern Division, 759020, India
+            - generic [ref=e914]:
+              - generic [ref=e915]:
+                - generic [ref=e916]:
+                  - generic [ref=e917]: schedule
+                  - text: Just now
+                - generic [ref=e918]:
+                  - generic [ref=e919]: precision_manufacturing
+                  - text: STOPPED
+              - button "History" [ref=e921]
+          - generic [ref=e924] [cursor=pointer]:
+            - generic [ref=e925]:
+              - generic [ref=e926]:
+                - generic [ref=e927]: local_shipping
+                - generic [ref=e928]: OD02CV5572
+              - generic [ref=e929]: CONNECTED
+            - paragraph [ref=e930]: Mansurkota, Southern Division, Odisha, 760007, India
+            - generic [ref=e931]:
+              - generic [ref=e932]:
+                - generic [ref=e933]:
+                  - generic [ref=e934]: schedule
+                  - text: Just now
+                - generic [ref=e935]:
+                  - generic [ref=e936]: precision_manufacturing
+                  - text: STOPPED
+              - button "History" [ref=e938]
+          - generic [ref=e941] [cursor=pointer]:
+            - generic [ref=e942]:
+              - generic [ref=e943]:
+                - generic [ref=e944]: local_shipping
+                - generic [ref=e945]: OD02AK8813
+              - generic [ref=e946]: CONNECTED
+            - paragraph [ref=e947]: Telisinga Road, Northern Division, Odisha, 759117, India
+            - generic [ref=e948]:
+              - generic [ref=e949]:
+                - generic [ref=e950]:
+                  - generic [ref=e951]: schedule
+                  - text: Just now
+                - generic [ref=e952]:
+                  - generic [ref=e953]: precision_manufacturing
+                  - text: STOPPED
+              - button "History" [ref=e955]
+          - generic [ref=e958] [cursor=pointer]:
+            - generic [ref=e959]:
+              - generic [ref=e960]:
+                - generic [ref=e961]: local_shipping
+                - generic [ref=e962]: OD02X9801
+              - generic [ref=e963]: CONNECTED
+            - paragraph [ref=e964]: Chhatisa, Central Division, Odisha, 754027, India
+            - generic [ref=e965]:
+              - generic [ref=e966]:
+                - generic [ref=e967]:
+                  - generic [ref=e968]: schedule
+                  - text: Just now
+                - generic [ref=e969]:
+                  - generic [ref=e970]: precision_manufacturing
+                  - text: LIFTING
+              - button "History" [ref=e972]
+          - generic [ref=e975] [cursor=pointer]:
+            - generic [ref=e976]:
+              - generic [ref=e977]:
+                - generic [ref=e978]: local_shipping
+                - generic [ref=e979]: OD33AS7813
+              - generic [ref=e980]: CONNECTED
+            - paragraph [ref=e981]: Road, Sathilo, Central Division, Odisha, 754295, India
+            - generic [ref=e982]:
+              - generic [ref=e983]:
+                - generic [ref=e984]:
+                  - generic [ref=e985]: schedule
+                  - text: 1m ago
+                - generic [ref=e986]:
+                  - generic [ref=e987]: precision_manufacturing
+                  - text: LIFTING
+              - button "History" [ref=e989]
+          - generic [ref=e992] [cursor=pointer]:
+            - generic [ref=e993]:
+              - generic [ref=e994]:
+                - generic [ref=e995]: local_shipping
+                - generic [ref=e996]: OD02AE2802
+              - generic [ref=e997]: CONNECTED
+            - paragraph [ref=e998]: Sudhadihikateni, Northern Division, Odisha, 759025, India
+            - generic [ref=e999]:
+              - generic [ref=e1000]:
+                - generic [ref=e1001]:
+                  - generic [ref=e1002]: schedule
+                  - text: Just now
+                - generic [ref=e1003]:
+                  - generic [ref=e1004]: precision_manufacturing
+                  - text: STOPPED
+              - button "History" [ref=e1006]
+          - generic [ref=e1009] [cursor=pointer]:
+            - generic [ref=e1010]:
+              - generic [ref=e1011]:
+                - generic [ref=e1012]: local_shipping
+                - generic [ref=e1013]: ECE02205CS0070719
+              - generic [ref=e1014]: CONNECTED
+            - paragraph [ref=e1015]: Basanaputi, Ganjam, Southern Division, Odisha 761002, India
+            - generic [ref=e1016]:
+              - generic [ref=e1017]:
+                - generic [ref=e1018]:
+                  - generic [ref=e1019]: schedule
+                  - text: 06:25am
+                - generic [ref=e1020]:
+                  - generic [ref=e1021]: precision_manufacturing
+                  - text: STOPPED
+              - generic [ref=e1022]:
+                - button "History" [ref=e1023]
+                - button "More Data" [ref=e1024]
+  - generic [ref=e674]:
+    - generic [ref=e675]:
+      - img [ref=e677]
+      - generic [ref=e681]: Suprwise
+      - button [ref=e682] [cursor=pointer]:
+        - img [ref=e683]
+    - generic [ref=e686]:
+      - generic [ref=e689]: Command
+      - generic [ref=e690] [cursor=pointer]:
+        - img "Fleet" [ref=e691]
+        - generic [ref=e692]:
+          - generic [ref=e693]: Flee
+          - generic [ref=e694]: t
+      - generic [ref=e695] [cursor=pointer]:
+        - img "Analytics" [ref=e696]
+        - generic [ref=e697]:
+          - generic [ref=e698]: Analytic
+          - generic [ref=e699]: s
+      - generic [ref=e700] [cursor=pointer]:
+        - img "Billing" [ref=e701]
+        - generic [ref=e702]:
+          - generic [ref=e703]: Billin
+          - generic [ref=e704]: g
+      - generic [ref=e705] [cursor=pointer]:
+        - img "Live GPS" [ref=e706]
+        - generic [ref=e707]:
+          - generic [ref=e708]: Live
+          - generic [ref=e709]: GPS
+      - generic [ref=e710] [cursor=pointer]:
+        - img "Fuel" [ref=e711]
+        - generic [ref=e712]:
+          - generic [ref=e713]: Fue
+          - generic [ref=e714]: l
+      - generic [ref=e715] [cursor=pointer]:
+        - img "Cameras" [ref=e716]
+        - generic [ref=e717]:
+          - generic [ref=e718]: Camera
+          - generic [ref=e719]: s
+      - generic [ref=e720] [cursor=pointer]:
+        - img "Diagnostics" [ref=e721]
+        - generic [ref=e722]:
+          - generic [ref=e723]: Diagnostic
+          - generic [ref=e724]: s
+      - generic [ref=e727]: Manage
+      - generic [ref=e728] [cursor=pointer]:
+        - img "Operators" [ref=e729]
+        - generic [ref=e730]:
+          - generic [ref=e731]: Manage
+          - generic [ref=e732]: Operators
+      - generic [ref=e733] [cursor=pointer]:
+        - img "Earnings" [ref=e734]
+        - generic [ref=e735]:
+          - generic [ref=e736]: Earning
+          - generic [ref=e737]: s
+      - generic [ref=e738] [cursor=pointer]:
+        - img "Attendance" [ref=e739]
+        - generic [ref=e740]:
+          - generic [ref=e741]: Attendanc
+          - generic [ref=e742]: e
+      - generic [ref=e745]: System
+      - generic [ref=e746] [cursor=pointer]:
+        - img [ref=e747]
+        - generic [ref=e750]:
+          - generic [ref=e751]: Setting
+          - generic [ref=e752]: s
+    - generic [ref=e753]:
+      - generic [ref=e756]: My Shift
+      - generic [ref=e757] [cursor=pointer]:
+        - img [ref=e758]
+        - generic [ref=e761]:
+          - generic [ref=e762]: Log
+          - generic [ref=e763]: Time
+      - generic [ref=e764] [cursor=pointer]:
+        - img [ref=e765]
+        - generic [ref=e767]:
+          - generic [ref=e768]: Histor
+          - generic [ref=e769]: "y"
+      - generic [ref=e770] [cursor=pointer]:
+        - img "Attendance" [ref=e771]
+        - generic [ref=e772]:
+          - generic [ref=e773]: Attendanc
+          - generic [ref=e774]: e
+      - generic [ref=e777]: System
+      - generic [ref=e778] [cursor=pointer]:
+        - img [ref=e779]
+        - text: Settings
+    - generic [ref=e782]:
+      - generic [ref=e783]:
+        - generic [ref=e784] [cursor=pointer]: "90"
+        - generic [ref=e786]: "9010719021"
+      - button "Sign Out" [ref=e787] [cursor=pointer]:
+        - img [ref=e788]
+        - text: Sign Out
+  - generic [ref=e791] [cursor=pointer]:
+    - generic [ref=e792]:
+      - generic [ref=e793]: Revenue
+      - generic [ref=e794]: ₹0
+    - generic [ref=e796]:
+      - generic [ref=e797]: Utilization
+      - generic [ref=e798]: 10%
+    - generic [ref=e800]:
+      - generic [ref=e801]: Active Fleet
+      - generic [ref=e802]: 2/9

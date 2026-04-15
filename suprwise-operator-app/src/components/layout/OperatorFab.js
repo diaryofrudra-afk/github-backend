@@ -1,0 +1,22 @@
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { useState } from 'react';
+import { useApp } from '../../context/AppContext';
+export function OperatorFab({ onSignOut }) {
+    const { user, setSettingsOpen, theme, toggleTheme } = useApp();
+    const [menuOpen, setMenuOpen] = useState(false);
+    const initials = user ? user.slice(0, 2).toUpperCase() : 'U';
+    const isDark = theme === 'dark';
+    function handleDocuments() {
+        setMenuOpen(false);
+        setSettingsOpen(true);
+    }
+    function handleThemeToggle() {
+        toggleTheme();
+    }
+    function handleLogout() {
+        setMenuOpen(false);
+        onSignOut();
+    }
+    return (_jsxs(_Fragment, { children: [menuOpen && (_jsx("div", { className: "operator-fab-overlay", onClick: () => setMenuOpen(false) })), _jsxs("div", { className: `operator-fab-menu${menuOpen ? ' open' : ''}`, children: [_jsx("button", { className: "operator-fab-close", onClick: () => setMenuOpen(false), children: "\u2715" }), _jsxs("div", { className: "operator-fab-items", children: [_jsxs("button", { className: "operator-fab-item", onClick: handleDocuments, children: [_jsx("div", { className: "operator-fab-item-icon", children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", fill: "none", children: [_jsx("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), _jsx("polyline", { points: "14 2 14 8 20 8" }), _jsx("line", { x1: "12", y1: "18", x2: "12", y2: "12" }), _jsx("line", { x1: "9", y1: "15", x2: "15", y2: "15" })] }) }), _jsx("span", { className: "operator-fab-item-label", children: "Upload Documents" })] }), _jsxs("button", { className: "operator-fab-item", onClick: handleThemeToggle, children: [_jsx("div", { className: "operator-fab-item-icon", children: isDark ? (_jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", fill: "none", children: [_jsx("circle", { cx: "12", cy: "12", r: "5" }), _jsx("line", { x1: "12", y1: "1", x2: "12", y2: "3" }), _jsx("line", { x1: "12", y1: "21", x2: "12", y2: "23" }), _jsx("line", { x1: "4.22", y1: "4.22", x2: "5.64", y2: "5.64" }), _jsx("line", { x1: "18.36", y1: "18.36", x2: "19.78", y2: "19.78" }), _jsx("line", { x1: "1", y1: "12", x2: "3", y2: "12" }), _jsx("line", { x1: "21", y1: "12", x2: "23", y2: "12" }), _jsx("line", { x1: "4.22", y1: "19.78", x2: "5.64", y2: "18.36" }), _jsx("line", { x1: "18.36", y1: "5.64", x2: "19.78", y2: "4.22" })] })) : (_jsx("svg", { width: "20", height: "20", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", fill: "none", children: _jsx("path", { d: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" }) })) }), _jsx("span", { className: "operator-fab-item-label", children: isDark ? 'Light Mode' : 'Dark Mode' }), _jsx("div", { className: `operator-fab-toggle${isDark ? '' : ' active'}`, children: _jsx("div", { className: "operator-fab-toggle-knob" }) })] }), _jsxs("button", { className: "operator-fab-item operator-fab-item-danger", onClick: handleLogout, children: [_jsx("div", { className: "operator-fab-item-icon", children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", fill: "none", children: [_jsx("path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }), _jsx("polyline", { points: "16 17 21 12 16 7" }), _jsx("line", { x1: "21", y1: "12", x2: "9", y2: "12" })] }) }), _jsx("span", { className: "operator-fab-item-label", children: "Logout" })] })] })] }), _jsx("button", { className: `operator-fab-btn${menuOpen ? ' open' : ''}`, onClick: () => setMenuOpen(!menuOpen), "aria-label": "Profile menu", children: menuOpen ? (_jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", fill: "none", children: [_jsx("line", { x1: "18", y1: "6", x2: "6", y2: "18" }), _jsx("line", { x1: "6", y1: "6", x2: "18", y2: "18" })] })) : (_jsx("span", { className: "operator-fab-initials", children: initials })) })] }));
+}
+//# sourceMappingURL=OperatorFab.js.map

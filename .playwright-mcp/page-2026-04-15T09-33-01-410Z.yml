@@ -1,0 +1,41 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - heading "Create Account" [level=1] [ref=e7]
+    - textbox "Full Name" [ref=e8]
+    - textbox "Email Address" [ref=e9]
+    - generic [ref=e10]:
+      - generic: "+91"
+      - textbox "Phone Number" [ref=e11]
+    - generic:
+      - button "Request OTP":
+        - img
+        - text: Request OTP
+    - generic [ref=e13]: or sign up with email
+    - button "Sign up with Google" [ref=e14] [cursor=pointer]:
+      - img [ref=e15]
+      - text: Sign up with Google
+  - generic [ref=e21]:
+    - heading "Sign In" [level=1] [ref=e22]
+    - generic [ref=e23]:
+      - generic: "+91"
+      - textbox "Phone Number" [ref=e24]
+    - generic:
+      - button "Request OTP":
+        - img
+        - text: Request OTP
+    - generic [ref=e26]: or sign in with email
+    - button "Sign in with Google" [ref=e27] [cursor=pointer]:
+      - img [ref=e28]
+      - text: Sign in with Google
+    - button "🧪 Test Login (9010719021)" [ref=e33] [cursor=pointer]
+  - generic [ref=e35]:
+    - generic [ref=e36]:
+      - heading "Welcome To Suprwise" [level=1] [ref=e37]:
+        - text: Welcome To
+        - text: Suprwise
+      - paragraph [ref=e38]: Sign In to to see your Dashboard
+      - button "Sign In" [ref=e39] [cursor=pointer]
+    - generic [ref=e40]:
+      - heading "New to Suprwise ?" [level=1] [ref=e41]
+      - paragraph [ref=e42]: Register to track your fleet using our Ai Powered Fleet Managment App
+      - button "Sign Up" [ref=e43] [cursor=pointer]
