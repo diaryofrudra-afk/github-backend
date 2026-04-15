@@ -199,7 +199,7 @@ svg.rupee-icon text {
 
 /* ══ LOGIN ══ */
 #login-screen {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -352,9 +352,7 @@ svg.rupee-icon text {
 /* ══ APP SHELL ══ */
 #app-shell {
   display: none;
-  height: 100%;
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   flex-direction: column;
 }
@@ -1177,7 +1175,9 @@ svg.rupee-icon text {
 .page-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px
+  padding: 20px;
+  overscroll-behavior: contain;
+  padding-bottom: 120px;  /* space for floating dashboard */
 }
 
 .page {
@@ -2360,7 +2360,7 @@ textarea.notes-area:focus {
 /* ══ GPS PAGE ══ */
 .gps-iframe-wrap {
   width: 100%;
-  height: calc(100vh - 120px);
+  height: calc(100dvh - 120px);
   border: 1px solid var(--border);
   border-radius: var(--rlg);
   overflow: hidden;
@@ -4168,7 +4168,7 @@ select:focus {
   position: fixed;
   top: 0;
   left: -260px;
-  height: 100vh;
+  height: 100dvh;
   width: 240px;
   background: var(--bg2);
   border-right: 1px solid var(--border);
@@ -5432,7 +5432,7 @@ select:focus {
 .body-split {
   padding: 8px;
   gap: 8px;
-  height: 100vh;
+  height: 100dvh;
 }
 
 /* Sidebar — pitch black, matches page background */
@@ -9085,7 +9085,7 @@ select:focus {
 /* ══ OPERATOR BOTTOM NAV — Modern Floating Style            */
 /* ═══════════════════════════════════════════════════════════ */
 #bottom-nav-spacer {
-  height: 0;
+  height: 90px;  /* space for floating bottom nav + safe area */
   flex-shrink: 0;
 }
 
@@ -9349,6 +9349,7 @@ select:focus {
   overflow-x: hidden !important;
   display: flex !important;
   flex-direction: column !important;
+  padding-bottom: 90px !important;  /* space for floating bottom nav */
 }
 
 .operator-mode .page.active {
@@ -9408,7 +9409,7 @@ select:focus {
 
 .logger-page-modern {
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   padding: 0;
   width: 100%;
