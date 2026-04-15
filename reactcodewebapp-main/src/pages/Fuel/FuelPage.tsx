@@ -140,7 +140,10 @@ export function FuelPage({ active }: { active: boolean }) {
                       <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>{litresTotal.toFixed(1)} L</div>
                       <div style={{ fontSize: 9, color: 'var(--t3)' }}>{fmtINR(costTotal)} total</div>
                     </div>
-                    <button className="btn-sm accent" style={{ padding: '5px 10px' }} onClick={() => openFuelModal(crane.reg)}>+ Log</button>
+                    <button className="btn-sm accent" style={{ padding: '5px 10px' }} onClick={() => openFuelModal(crane.reg)}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                      {' '}Log
+                    </button>
                   </div>
                 </div>
                 <div className="fuel-bar-wrap">

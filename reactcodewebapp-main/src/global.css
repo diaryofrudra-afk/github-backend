@@ -1186,7 +1186,14 @@ svg.rupee-icon text {
 
 .page.active {
   display: block;
-  animation: fadeIn 0.2s ease
+  animation: fadeIn 0.2s ease;
+  overflow-y: auto;
+  max-height: calc(100vh - 140px)
+}
+
+#page-gps.active {
+  overflow-y: visible;
+  max-height: none
 }
 
 @keyframes fadeIn {
