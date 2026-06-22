@@ -56,8 +56,13 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
       setToken(res.token);
       setUser(res.phone || res.email || null);
       setUserRole(res.role);
-      setActivePage(res.role === 'operator' ? 'logger' : 'fleet');
-      loadDataFromAPI();
+      if (res.role === 'operator') {
+        // Redirect operators to the dedicated operator app
+        window.location.href = '/operator/';
+      } else {
+        setActivePage('fleet');
+        loadDataFromAPI();
+      }
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Google authentication failed');
     } finally {
@@ -110,8 +115,13 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
         setToken(res.token);
         setUser(res.phone);
         setUserRole(res.role);
-        setActivePage(res.role === 'operator' ? 'logger' : 'fleet');
-        loadDataFromAPI();
+        if (res.role === 'operator') {
+          // Redirect operators to the dedicated operator app
+          window.location.href = '/operator/';
+        } else {
+          setActivePage('fleet');
+          loadDataFromAPI();
+        }
       }
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Authentication failed');
@@ -129,8 +139,13 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
       setToken(res.token);
       setUser(res.phone);
       setUserRole(res.role);
-      setActivePage(res.role === 'operator' ? 'logger' : 'fleet');
-      loadDataFromAPI();
+      if (res.role === 'operator') {
+        // Redirect operators to the dedicated operator app
+        window.location.href = '/operator/';
+      } else {
+        setActivePage('fleet');
+        loadDataFromAPI();
+      }
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Test login failed');
     } finally {

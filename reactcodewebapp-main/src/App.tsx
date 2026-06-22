@@ -131,8 +131,15 @@ export default function App() {
     if (!token) return;
     api.me()
       .then(me => {
-        setUser(me.phone); setUserRole(me.role); setActivePage(me.role === 'operator' ? 'logger' : 'fleet');
-        loadDataFromAPI();
+        setUser(me.phone);
+        setUserRole(me.role);
+        if (me.role === 'operator') {
+          // Redirect operators to the dedicated operator app
+          window.location.href = '/operator/';
+        } else {
+          setActivePage('fleet');
+          loadDataFromAPI();
+        }
       })
       .catch(() => {
         clearToken();
