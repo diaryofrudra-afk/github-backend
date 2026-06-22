@@ -1,0 +1,238 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e13]: Suprwise
+        - button "Collapse sidebar" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+      - navigation [ref=e17]:
+        - generic: Command
+        - list [ref=e19]:
+          - listitem [ref=e20]:
+            - link "Fleet" [ref=e21] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e23]
+              - generic [ref=e28]: Fleet
+          - listitem [ref=e29]:
+            - link "Analytics" [ref=e30] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e32]
+              - generic [ref=e34]: Analytics
+          - listitem [ref=e35]:
+            - link "Billing" [ref=e36] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e38]
+              - generic [ref=e41]: Billing
+          - listitem [ref=e42]:
+            - link "Live GPS" [ref=e43] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e45]
+              - generic [ref=e48]: Live GPS
+          - listitem [ref=e49]:
+            - link "Fuel" [ref=e50] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e52]
+              - generic [ref=e55]: Fuel
+          - listitem [ref=e56]:
+            - link "Cameras" [ref=e57] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e59]
+              - generic [ref=e62]: Cameras
+          - listitem [ref=e63]:
+            - link "Diagnostics" [ref=e64] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e66]
+              - generic [ref=e68]: Diagnostics
+          - listitem [ref=e69]:
+            - link "Engine History" [active] [ref=e70] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e72]
+              - generic [ref=e78]: Engine History
+        - generic: Manage
+        - list [ref=e80]:
+          - listitem [ref=e81]:
+            - link "Operators" [ref=e82] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e84]
+              - generic [ref=e89]: Operators
+          - listitem [ref=e90]:
+            - link "Earnings" [ref=e91] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e93]
+              - generic [ref=e97]: Earnings
+          - listitem [ref=e98]:
+            - link "Attendance" [ref=e99] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e101]
+              - generic [ref=e104]: Attendance
+      - generic [ref=e105]:
+        - generic [ref=e110]:
+          - paragraph [ref=e111]: Rudra
+          - paragraph [ref=e112]: Owner
+        - generic [ref=e113]:
+          - button "Settings" [ref=e114] [cursor=pointer]:
+            - img [ref=e115]
+          - button "Toggle theme" [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+          - button "Logout" [ref=e125] [cursor=pointer]:
+            - img [ref=e126]
+    - generic [ref=e803]:
+      - heading "Engine Status History" [level=2] [ref=e804]
+      - generic [ref=e806]:
+        - combobox [ref=e807] [cursor=pointer]:
+          - option "All Vehicles" [selected]
+          - option "OD02DL4206"
+          - option "OD02AS8409"
+          - option "OR02AP3339"
+          - option "OD02CX4940"
+          - option "OD02CV5572"
+          - option "OD02AK8813"
+          - option "OD02X9801"
+          - option "OD33AS7813"
+          - option "OD02AE2802"
+          - option "ECE02205CS0070719"
+        - textbox [ref=e808]
+        - textbox [ref=e809]
+        - button "Download CSV" [ref=e810] [cursor=pointer]
+      - table [ref=e811]:
+        - rowgroup [ref=e812]:
+          - row "Registration Number Engine Status Previous Status Time Source Location" [ref=e813]:
+            - columnheader "Registration Number" [ref=e814]
+            - columnheader "Engine Status" [ref=e815]
+            - columnheader "Previous Status" [ref=e816]
+            - columnheader "Time" [ref=e817]
+            - columnheader "Source" [ref=e818]
+            - columnheader "Location" [ref=e819]
+        - rowgroup [ref=e820]:
+          - row "ECE02205CS0070719 OFF - 15 Apr 2026, 08:07 pm gps Basanaputi, Ganjam, Southern Division, Odisha 761002, India" [ref=e821]:
+            - cell "ECE02205CS0070719" [ref=e822]
+            - cell "OFF" [ref=e823]
+            - cell "-" [ref=e824]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e825]
+            - cell "gps" [ref=e826]
+            - cell "Basanaputi, Ganjam, Southern Division, Odisha 761002, India" [ref=e827]
+          - row "OD02AE2802 OFF - 15 Apr 2026, 08:07 pm gps Sudhadihikateni, Northern Division, Odisha, 759025, India" [ref=e828]:
+            - cell "OD02AE2802" [ref=e829]
+            - cell "OFF" [ref=e830]
+            - cell "-" [ref=e831]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e832]
+            - cell "gps" [ref=e833]
+            - cell "Sudhadihikateni, Northern Division, Odisha, 759025, India" [ref=e834]
+          - row "OD33AS7813 OFF - 15 Apr 2026, 08:07 pm gps Sathilo, Central Division, Odisha, 754295, India" [ref=e835]:
+            - cell "OD33AS7813" [ref=e836]
+            - cell "OFF" [ref=e837]
+            - cell "-" [ref=e838]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e839]
+            - cell "gps" [ref=e840]
+            - cell "Sathilo, Central Division, Odisha, 754295, India" [ref=e841]
+          - row "OD02X9801 OFF - 15 Apr 2026, 08:07 pm gps Chhatisa, Central Division, Odisha, 754027, India" [ref=e842]:
+            - cell "OD02X9801" [ref=e843]
+            - cell "OFF" [ref=e844]
+            - cell "-" [ref=e845]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e846]
+            - cell "gps" [ref=e847]
+            - cell "Chhatisa, Central Division, Odisha, 754027, India" [ref=e848]
+          - row "OD02AK8813 OFF - 15 Apr 2026, 08:07 pm gps Telisinga Road, Northern Division, Odisha, 759117, India" [ref=e849]:
+            - cell "OD02AK8813" [ref=e850]
+            - cell "OFF" [ref=e851]
+            - cell "-" [ref=e852]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e853]
+            - cell "gps" [ref=e854]
+            - cell "Telisinga Road, Northern Division, Odisha, 759117, India" [ref=e855]
+          - row "OD02CV5572 OFF - 15 Apr 2026, 08:07 pm gps Mansurkota, Southern Division, Odisha, 760007, India" [ref=e856]:
+            - cell "OD02CV5572" [ref=e857]
+            - cell "OFF" [ref=e858]
+            - cell "-" [ref=e859]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e860]
+            - cell "gps" [ref=e861]
+            - cell "Mansurkota, Southern Division, Odisha, 760007, India" [ref=e862]
+          - row "OD02CX4940 OFF - 15 Apr 2026, 08:07 pm gps at, Nimidha, Northern Division, 759020, India" [ref=e863]:
+            - cell "OD02CX4940" [ref=e864]
+            - cell "OFF" [ref=e865]
+            - cell "-" [ref=e866]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e867]
+            - cell "gps" [ref=e868]
+            - cell "at, Nimidha, Northern Division, 759020, India" [ref=e869]
+          - row "OD02AS8409 OFF - 15 Apr 2026, 08:07 pm gps Mancheswar Station Road, Rangamatia, Mancheswar, Central Division, Odisha, 751017, India" [ref=e870]:
+            - cell "OD02AS8409" [ref=e871]
+            - cell "OFF" [ref=e872]
+            - cell "-" [ref=e873]
+            - cell "15 Apr 2026, 08:07 pm" [ref=e874]
+            - cell "gps" [ref=e875]
+            - cell "Mancheswar Station Road, Rangamatia, Mancheswar, Central Division, Odisha, 751017, India" [ref=e876]
+  - generic [ref=e156]:
+    - generic [ref=e157]:
+      - img [ref=e159]
+      - generic [ref=e778]: Suprwise
+      - button [ref=e164] [cursor=pointer]:
+        - img [ref=e165]
+    - generic [ref=e168]:
+      - generic [ref=e779]: Command
+      - generic [ref=e172] [cursor=pointer]:
+        - img "Fleet" [ref=e173]
+        - generic [ref=e780]: Fleet
+      - generic [ref=e177] [cursor=pointer]:
+        - img "Analytics" [ref=e178]
+        - generic [ref=e781]: Analytics
+      - generic [ref=e182] [cursor=pointer]:
+        - img "Billing" [ref=e183]
+        - generic [ref=e782]: Billing
+      - generic [ref=e187] [cursor=pointer]:
+        - img "Live GPS" [ref=e188]
+        - generic [ref=e783]: Live GPS
+      - generic [ref=e192] [cursor=pointer]:
+        - img "Fuel" [ref=e193]
+        - generic [ref=e784]: Fuel
+      - generic [ref=e197] [cursor=pointer]:
+        - img "Cameras" [ref=e198]
+        - generic [ref=e785]: Cameras
+      - generic [ref=e202] [cursor=pointer]:
+        - img "Diagnostics" [ref=e203]
+        - generic [ref=e786]: Diagnostics
+      - generic [ref=e787]: Manage
+      - generic [ref=e210] [cursor=pointer]:
+        - img "Operators" [ref=e211]
+        - generic [ref=e788]: Manage Operators
+      - generic [ref=e215] [cursor=pointer]:
+        - img "Earnings" [ref=e216]
+        - generic [ref=e789]: Earnings
+      - generic [ref=e220] [cursor=pointer]:
+        - img "Attendance" [ref=e221]
+        - generic [ref=e790]: Attendance
+      - generic [ref=e791]: System
+      - generic [ref=e228] [cursor=pointer]:
+        - img [ref=e229]
+        - generic [ref=e792]: Settings
+    - generic [ref=e235]:
+      - generic [ref=e793]: My Shift
+      - generic [ref=e239] [cursor=pointer]:
+        - img [ref=e240]
+        - generic [ref=e794]: Log Time
+      - generic [ref=e246] [cursor=pointer]:
+        - img [ref=e247]
+        - generic [ref=e795]: History
+      - generic [ref=e252] [cursor=pointer]:
+        - img "Attendance" [ref=e253]
+        - generic [ref=e796]: Attendance
+      - generic [ref=e797]: System
+      - generic [ref=e260] [cursor=pointer]:
+        - img [ref=e261]
+        - text: Settings
+    - generic [ref=e264]:
+      - generic [ref=e265]:
+        - generic [ref=e266] [cursor=pointer]: "90"
+        - generic [ref=e268]: "9010719021"
+      - button "Sign Out" [ref=e269] [cursor=pointer]:
+        - img [ref=e270]
+        - text: Sign Out
+  - generic [ref=e273] [cursor=pointer]:
+    - generic [ref=e274]:
+      - generic [ref=e275]: Revenue
+      - generic [ref=e276]: ₹0
+    - generic [ref=e278]:
+      - generic [ref=e279]: Utilization
+      - generic [ref=e280]: 10%
+    - generic [ref=e282]:
+      - generic [ref=e283]: Active Fleet
+      - generic [ref=e284]: 0/9

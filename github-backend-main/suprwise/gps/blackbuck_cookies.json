@@ -1,0 +1,18 @@
+{
+  "total_cookies": 1,
+  "cookies": [
+    {
+      "host_key": ".blackbuck.com",
+      "name": "mp_2d4bb96d7ab8460b870be47dfae2f8f0_mixpanel",
+      "path": "/",
+      "is_secure": false,
+      "is_httponly": false,
+      "expires_utc": 13451300125000000,
+      "creation_utc": 13419764048947226,
+      "value": "",
+      "encrypted_value_present": true,
+      "decrypted_value": "(encrypted, needs key)"
+    }
+  ],
+  "note": "Some cookies may be encrypted. Use decrypt_cookie_mac() with Chrome Safe Storage key to decrypt."
+}

@@ -1,0 +1,564 @@
+- generic [ref=e44]:
+  - generic [ref=e45]:
+    - complementary [ref=e46]:
+      - generic [ref=e47]:
+        - img [ref=e49]
+        - generic [ref=e54]: Suprwise
+        - button "Collapse sidebar" [ref=e55] [cursor=pointer]:
+          - img [ref=e56]
+      - navigation [ref=e58]:
+        - generic: Command
+        - list [ref=e60]:
+          - listitem [ref=e61]:
+            - link "Fleet" [ref=e62] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e64]
+              - generic [ref=e69]: Fleet
+          - listitem [ref=e70]:
+            - link "Analytics" [ref=e71] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e73]
+              - generic [ref=e75]: Analytics
+          - listitem [ref=e76]:
+            - link "Billing" [ref=e77] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e79]
+              - generic [ref=e82]: Billing
+          - listitem [ref=e83]:
+            - link "Live GPS" [ref=e84] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e86]
+              - generic [ref=e89]: Live GPS
+          - listitem [ref=e90]:
+            - link "Fuel" [ref=e91] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e93]
+              - generic [ref=e96]: Fuel
+          - listitem [ref=e97]:
+            - link "Cameras" [ref=e98] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e100]
+              - generic [ref=e103]: Cameras
+          - listitem [ref=e104]:
+            - link "Diagnostics" [ref=e105] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e107]
+              - generic [ref=e109]: Diagnostics
+        - generic: Manage
+        - list [ref=e111]:
+          - listitem [ref=e112]:
+            - link "Operators" [ref=e113] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e115]
+              - generic [ref=e120]: Operators
+          - listitem [ref=e121]:
+            - link "Earnings" [ref=e122] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e124]
+              - generic [ref=e128]: Earnings
+          - listitem [ref=e129]:
+            - link "Attendance" [ref=e130] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e132]
+              - generic [ref=e135]: Attendance
+      - generic [ref=e136]:
+        - generic [ref=e140]:
+          - paragraph [ref=e141]: Rudra
+          - paragraph [ref=e142]: Owner
+        - generic [ref=e143]:
+          - button "Settings" [ref=e144] [cursor=pointer]:
+            - img [ref=e145]
+          - button "Toggle theme" [ref=e148] [cursor=pointer]:
+            - img [ref=e149]
+          - button "Logout" [ref=e155] [cursor=pointer]:
+            - img [ref=e156]
+    - generic [ref=e160]:
+      - generic [ref=e161]:
+        - generic [ref=e162]: Fleet Deployment
+        - generic [ref=e163]:
+          - generic [ref=e164]:
+            - img
+            - textbox "Search assets, operators…" [ref=e165]
+          - button "Add Operator" [ref=e166] [cursor=pointer]:
+            - img [ref=e167]
+            - text: Add Operator
+          - button "Add Asset" [ref=e170] [cursor=pointer]:
+            - img [ref=e171]
+            - text: Add Asset
+      - generic [ref=e174]:
+        - button "All Assets" [ref=e175] [cursor=pointer]
+        - button "Active" [ref=e176] [cursor=pointer]
+        - button "Standby" [ref=e177] [cursor=pointer]
+        - button "Alerts" [ref=e178] [cursor=pointer]: Alerts
+      - generic [ref=e180]:
+        - generic [ref=e181]:
+          - generic [ref=e182]:
+            - img "OD02DL4206" [ref=e183]
+            - generic [ref=e184]: ACTIVE
+          - generic [ref=e186]:
+            - generic [ref=e187]:
+              - heading "OD02DL4206" [level=3] [ref=e188]
+              - paragraph [ref=e189]: 2026 · Escort · F23 · 23
+              - generic [ref=e190]:
+                - generic [ref=e191]:
+                  - img [ref=e192]
+                  - generic [ref=e194]:
+                    - paragraph [ref=e195]: Engine
+                    - paragraph [ref=e196]: OPTIMAL
+                - generic [ref=e197]:
+                  - img [ref=e198]
+                  - generic [ref=e200]:
+                    - paragraph [ref=e201]: Status
+                    - paragraph [ref=e202]: —
+                - generic [ref=e203]:
+                  - img [ref=e204]
+                  - generic [ref=e207]:
+                    - paragraph [ref=e208]: GPS
+                    - paragraph [ref=e209]: IDLE
+            - generic [ref=e210]:
+              - generic [ref=e211]:
+                - generic [ref=e212]: "?"
+                - generic [ref=e213]:
+                  - paragraph [ref=e214]: Operator
+                  - paragraph [ref=e215]: "9937992410"
+              - generic [ref=e216]:
+                - button "Edit" [ref=e217] [cursor=pointer]:
+                  - img [ref=e218]
+                - button "Delete" [ref=e221] [cursor=pointer]:
+                  - img [ref=e222]
+        - generic [ref=e224]:
+          - generic [ref=e225]:
+            - img "OD02AS8409" [ref=e226]
+            - generic [ref=e227]: STANDBY
+          - generic [ref=e229]:
+            - generic [ref=e230]:
+              - heading "OD02AS8409" [level=3] [ref=e231]
+              - paragraph [ref=e232]: 2017 · Indo Power · Hydra · 16
+              - generic [ref=e233]:
+                - generic [ref=e234]:
+                  - img [ref=e235]
+                  - generic [ref=e237]:
+                    - paragraph [ref=e238]: Engine
+                    - paragraph [ref=e239]: UNKNOWN
+                - generic [ref=e240]:
+                  - img [ref=e241]
+                  - generic [ref=e243]:
+                    - paragraph [ref=e244]: Status
+                    - paragraph [ref=e245]: —
+                - generic [ref=e246]:
+                  - img [ref=e247]
+                  - generic [ref=e250]:
+                    - paragraph [ref=e251]: GPS
+                    - paragraph [ref=e252]: IDLE
+            - generic [ref=e253]:
+              - generic [ref=e254]:
+                - img [ref=e256]
+                - generic [ref=e259]:
+                  - paragraph [ref=e260]: Operator
+                  - paragraph [ref=e261]: Unassigned
+              - generic [ref=e262]:
+                - button "Edit" [ref=e263] [cursor=pointer]:
+                  - img [ref=e264]
+                - button "Assign Operator" [ref=e267] [cursor=pointer]:
+                  - img [ref=e268]
+                - button "Delete" [ref=e271] [cursor=pointer]:
+                  - img [ref=e272]
+        - generic [ref=e274]:
+          - generic [ref=e275]:
+            - img "OR02AP3339" [ref=e276]
+            - generic [ref=e277]: STANDBY
+          - generic [ref=e279]:
+            - generic [ref=e280]:
+              - heading "OR02AP3339" [level=3] [ref=e281]
+              - paragraph [ref=e282]: Blackbuck GPS · Truck
+              - generic [ref=e283]:
+                - generic [ref=e284]:
+                  - img [ref=e285]
+                  - generic [ref=e287]:
+                    - paragraph [ref=e288]: Engine
+                    - paragraph [ref=e289]: UNKNOWN
+                - generic [ref=e290]:
+                  - img [ref=e291]
+                  - generic [ref=e293]:
+                    - paragraph [ref=e294]: Status
+                    - paragraph [ref=e295]: —
+                - generic [ref=e296]:
+                  - img [ref=e297]
+                  - generic [ref=e300]:
+                    - paragraph [ref=e301]: GPS
+                    - paragraph [ref=e302]: IDLE
+            - generic [ref=e303]:
+              - generic [ref=e304]:
+                - img [ref=e306]
+                - generic [ref=e309]:
+                  - paragraph [ref=e310]: Operator
+                  - paragraph [ref=e311]: Unassigned
+              - generic [ref=e312]:
+                - button "Edit" [ref=e313] [cursor=pointer]:
+                  - img [ref=e314]
+                - button "Assign Operator" [ref=e317] [cursor=pointer]:
+                  - img [ref=e318]
+                - button "Delete" [ref=e321] [cursor=pointer]:
+                  - img [ref=e322]
+        - generic [ref=e324]:
+          - generic [ref=e325]:
+            - img "OD02CX4940" [ref=e326]
+            - generic [ref=e327]: STANDBY
+          - generic [ref=e329]:
+            - generic [ref=e330]:
+              - heading "OD02CX4940" [level=3] [ref=e331]
+              - paragraph [ref=e332]: Blackbuck GPS · Truck
+              - generic [ref=e333]:
+                - generic [ref=e334]:
+                  - img [ref=e335]
+                  - generic [ref=e337]:
+                    - paragraph [ref=e338]: Engine
+                    - paragraph [ref=e339]: UNKNOWN
+                - generic [ref=e340]:
+                  - img [ref=e341]
+                  - generic [ref=e343]:
+                    - paragraph [ref=e344]: Status
+                    - paragraph [ref=e345]: —
+                - generic [ref=e346]:
+                  - img [ref=e347]
+                  - generic [ref=e350]:
+                    - paragraph [ref=e351]: GPS
+                    - paragraph [ref=e352]: IDLE
+            - generic [ref=e353]:
+              - generic [ref=e354]:
+                - img [ref=e356]
+                - generic [ref=e359]:
+                  - paragraph [ref=e360]: Operator
+                  - paragraph [ref=e361]: Unassigned
+              - generic [ref=e362]:
+                - button "Edit" [ref=e363] [cursor=pointer]:
+                  - img [ref=e364]
+                - button "Assign Operator" [ref=e367] [cursor=pointer]:
+                  - img [ref=e368]
+                - button "Delete" [ref=e371] [cursor=pointer]:
+                  - img [ref=e372]
+        - generic [ref=e374]:
+          - generic [ref=e375]:
+            - img "OD02CV5572" [ref=e376]
+            - generic [ref=e377]: STANDBY
+          - generic [ref=e379]:
+            - generic [ref=e380]:
+              - heading "OD02CV5572" [level=3] [ref=e381]
+              - paragraph [ref=e382]: Blackbuck GPS · Truck
+              - generic [ref=e383]:
+                - generic [ref=e384]:
+                  - img [ref=e385]
+                  - generic [ref=e387]:
+                    - paragraph [ref=e388]: Engine
+                    - paragraph [ref=e389]: UNKNOWN
+                - generic [ref=e390]:
+                  - img [ref=e391]
+                  - generic [ref=e393]:
+                    - paragraph [ref=e394]: Status
+                    - paragraph [ref=e395]: —
+                - generic [ref=e396]:
+                  - img [ref=e397]
+                  - generic [ref=e400]:
+                    - paragraph [ref=e401]: GPS
+                    - paragraph [ref=e402]: IDLE
+            - generic [ref=e403]:
+              - generic [ref=e404]:
+                - img [ref=e406]
+                - generic [ref=e409]:
+                  - paragraph [ref=e410]: Operator
+                  - paragraph [ref=e411]: Unassigned
+              - generic [ref=e412]:
+                - button "Edit" [ref=e413] [cursor=pointer]:
+                  - img [ref=e414]
+                - button "Assign Operator" [ref=e417] [cursor=pointer]:
+                  - img [ref=e418]
+                - button "Delete" [ref=e421] [cursor=pointer]:
+                  - img [ref=e422]
+        - generic [ref=e424]:
+          - generic [ref=e425]:
+            - img "OD02AK8813" [ref=e426]
+            - generic [ref=e427]: STANDBY
+          - generic [ref=e429]:
+            - generic [ref=e430]:
+              - heading "OD02AK8813" [level=3] [ref=e431]
+              - paragraph [ref=e432]: Blackbuck GPS · Truck
+              - generic [ref=e433]:
+                - generic [ref=e434]:
+                  - img [ref=e435]
+                  - generic [ref=e437]:
+                    - paragraph [ref=e438]: Engine
+                    - paragraph [ref=e439]: UNKNOWN
+                - generic [ref=e440]:
+                  - img [ref=e441]
+                  - generic [ref=e443]:
+                    - paragraph [ref=e444]: Status
+                    - paragraph [ref=e445]: —
+                - generic [ref=e446]:
+                  - img [ref=e447]
+                  - generic [ref=e450]:
+                    - paragraph [ref=e451]: GPS
+                    - paragraph [ref=e452]: IDLE
+            - generic [ref=e453]:
+              - generic [ref=e454]:
+                - img [ref=e456]
+                - generic [ref=e459]:
+                  - paragraph [ref=e460]: Operator
+                  - paragraph [ref=e461]: Unassigned
+              - generic [ref=e462]:
+                - button "Edit" [ref=e463] [cursor=pointer]:
+                  - img [ref=e464]
+                - button "Assign Operator" [ref=e467] [cursor=pointer]:
+                  - img [ref=e468]
+                - button "Delete" [ref=e471] [cursor=pointer]:
+                  - img [ref=e472]
+        - generic [ref=e474]:
+          - generic [ref=e475]:
+            - img "OD02X9801" [ref=e476]
+            - generic [ref=e477]: STANDBY
+          - generic [ref=e479]:
+            - generic [ref=e480]:
+              - heading "OD02X9801" [level=3] [ref=e481]
+              - paragraph [ref=e482]: Blackbuck GPS · Truck
+              - generic [ref=e483]:
+                - generic [ref=e484]:
+                  - img [ref=e485]
+                  - generic [ref=e487]:
+                    - paragraph [ref=e488]: Engine
+                    - paragraph [ref=e489]: UNKNOWN
+                - generic [ref=e490]:
+                  - img [ref=e491]
+                  - generic [ref=e493]:
+                    - paragraph [ref=e494]: Status
+                    - paragraph [ref=e495]: —
+                - generic [ref=e496]:
+                  - img [ref=e497]
+                  - generic [ref=e500]:
+                    - paragraph [ref=e501]: GPS
+                    - paragraph [ref=e502]: IDLE
+            - generic [ref=e503]:
+              - generic [ref=e504]:
+                - img [ref=e506]
+                - generic [ref=e509]:
+                  - paragraph [ref=e510]: Operator
+                  - paragraph [ref=e511]: Unassigned
+              - generic [ref=e512]:
+                - button "Edit" [ref=e513] [cursor=pointer]:
+                  - img [ref=e514]
+                - button "Assign Operator" [ref=e517] [cursor=pointer]:
+                  - img [ref=e518]
+                - button "Delete" [ref=e521] [cursor=pointer]:
+                  - img [ref=e522]
+        - generic [ref=e524]:
+          - generic [ref=e525]:
+            - img "OD33AS7813" [ref=e526]
+            - generic [ref=e527]: STANDBY
+          - generic [ref=e529]:
+            - generic [ref=e530]:
+              - heading "OD33AS7813" [level=3] [ref=e531]
+              - paragraph [ref=e532]: Blackbuck GPS · Truck
+              - generic [ref=e533]:
+                - generic [ref=e534]:
+                  - img [ref=e535]
+                  - generic [ref=e537]:
+                    - paragraph [ref=e538]: Engine
+                    - paragraph [ref=e539]: UNKNOWN
+                - generic [ref=e540]:
+                  - img [ref=e541]
+                  - generic [ref=e543]:
+                    - paragraph [ref=e544]: Status
+                    - paragraph [ref=e545]: —
+                - generic [ref=e546]:
+                  - img [ref=e547]
+                  - generic [ref=e550]:
+                    - paragraph [ref=e551]: GPS
+                    - paragraph [ref=e552]: IDLE
+            - generic [ref=e553]:
+              - generic [ref=e554]:
+                - img [ref=e556]
+                - generic [ref=e559]:
+                  - paragraph [ref=e560]: Operator
+                  - paragraph [ref=e561]: Unassigned
+              - generic [ref=e562]:
+                - button "Edit" [ref=e563] [cursor=pointer]:
+                  - img [ref=e564]
+                - button "Assign Operator" [ref=e567] [cursor=pointer]:
+                  - img [ref=e568]
+                - button "Delete" [ref=e571] [cursor=pointer]:
+                  - img [ref=e572]
+        - generic [ref=e574]:
+          - generic [ref=e575]:
+            - img "OD02AE2802" [ref=e576]
+            - generic [ref=e577]: STANDBY
+          - generic [ref=e579]:
+            - generic [ref=e580]:
+              - heading "OD02AE2802" [level=3] [ref=e581]
+              - paragraph [ref=e582]: Blackbuck GPS · Truck
+              - generic [ref=e583]:
+                - generic [ref=e584]:
+                  - img [ref=e585]
+                  - generic [ref=e587]:
+                    - paragraph [ref=e588]: Engine
+                    - paragraph [ref=e589]: UNKNOWN
+                - generic [ref=e590]:
+                  - img [ref=e591]
+                  - generic [ref=e593]:
+                    - paragraph [ref=e594]: Status
+                    - paragraph [ref=e595]: —
+                - generic [ref=e596]:
+                  - img [ref=e597]
+                  - generic [ref=e600]:
+                    - paragraph [ref=e601]: GPS
+                    - paragraph [ref=e602]: IDLE
+            - generic [ref=e603]:
+              - generic [ref=e604]:
+                - img [ref=e606]
+                - generic [ref=e609]:
+                  - paragraph [ref=e610]: Operator
+                  - paragraph [ref=e611]: Unassigned
+              - generic [ref=e612]:
+                - button "Edit" [ref=e613] [cursor=pointer]:
+                  - img [ref=e614]
+                - button "Assign Operator" [ref=e617] [cursor=pointer]:
+                  - img [ref=e618]
+                - button "Delete" [ref=e621] [cursor=pointer]:
+                  - img [ref=e622]
+        - generic [ref=e624]:
+          - generic [ref=e625]:
+            - img "ECE02205CS0070719" [ref=e626]
+            - generic [ref=e627]: STANDBY
+          - generic [ref=e629]:
+            - generic [ref=e630]:
+              - heading "ECE02205CS0070719" [level=3] [ref=e631]
+              - paragraph [ref=e632]: Trak N Tell · Truck
+              - generic [ref=e633]:
+                - generic [ref=e634]:
+                  - img [ref=e635]
+                  - generic [ref=e637]:
+                    - paragraph [ref=e638]: Engine
+                    - paragraph [ref=e639]: OPTIMAL
+                - generic [ref=e640]:
+                  - img [ref=e641]
+                  - generic [ref=e643]:
+                    - paragraph [ref=e644]: Status
+                    - paragraph [ref=e645]: —
+                - generic [ref=e646]:
+                  - img [ref=e647]
+                  - generic [ref=e650]:
+                    - paragraph [ref=e651]: GPS
+                    - paragraph [ref=e652]: IDLE
+            - generic [ref=e653]:
+              - generic [ref=e654]:
+                - img [ref=e656]
+                - generic [ref=e659]:
+                  - paragraph [ref=e660]: Operator
+                  - paragraph [ref=e661]: Unassigned
+              - generic [ref=e662]:
+                - button "Edit" [ref=e663] [cursor=pointer]:
+                  - img [ref=e664]
+                - button "Assign Operator" [ref=e667] [cursor=pointer]:
+                  - img [ref=e668]
+                - button "Delete" [ref=e671] [cursor=pointer]:
+                  - img [ref=e672]
+  - generic [ref=e674]:
+    - generic [ref=e675]:
+      - img [ref=e677]
+      - generic [ref=e681]: Suprwise
+      - button [ref=e682] [cursor=pointer]:
+        - img [ref=e683]
+    - generic [ref=e686]:
+      - generic [ref=e689]: Command
+      - generic [ref=e690] [cursor=pointer]:
+        - img "Fleet" [ref=e691]
+        - generic [ref=e692]:
+          - generic [ref=e693]: Flee
+          - generic [ref=e694]: t
+      - generic [ref=e695] [cursor=pointer]:
+        - img "Analytics" [ref=e696]
+        - generic [ref=e697]:
+          - generic [ref=e698]: Analytic
+          - generic [ref=e699]: s
+      - generic [ref=e700] [cursor=pointer]:
+        - img "Billing" [ref=e701]
+        - generic [ref=e702]:
+          - generic [ref=e703]: Billin
+          - generic [ref=e704]: g
+      - generic [ref=e705] [cursor=pointer]:
+        - img "Live GPS" [ref=e706]
+        - generic [ref=e707]:
+          - generic [ref=e708]: Live
+          - generic [ref=e709]: GPS
+      - generic [ref=e710] [cursor=pointer]:
+        - img "Fuel" [ref=e711]
+        - generic [ref=e712]:
+          - generic [ref=e713]: Fue
+          - generic [ref=e714]: l
+      - generic [ref=e715] [cursor=pointer]:
+        - img "Cameras" [ref=e716]
+        - generic [ref=e717]:
+          - generic [ref=e718]: Camera
+          - generic [ref=e719]: s
+      - generic [ref=e720] [cursor=pointer]:
+        - img "Diagnostics" [ref=e721]
+        - generic [ref=e722]:
+          - generic [ref=e723]: Diagnostic
+          - generic [ref=e724]: s
+      - generic [ref=e727]: Manage
+      - generic [ref=e728] [cursor=pointer]:
+        - img "Operators" [ref=e729]
+        - generic [ref=e730]:
+          - generic [ref=e731]: Manage
+          - generic [ref=e732]: Operators
+      - generic [ref=e733] [cursor=pointer]:
+        - img "Earnings" [ref=e734]
+        - generic [ref=e735]:
+          - generic [ref=e736]: Earning
+          - generic [ref=e737]: s
+      - generic [ref=e738] [cursor=pointer]:
+        - img "Attendance" [ref=e739]
+        - generic [ref=e740]:
+          - generic [ref=e741]: Attendanc
+          - generic [ref=e742]: e
+      - generic [ref=e745]: System
+      - generic [ref=e746] [cursor=pointer]:
+        - img [ref=e747]
+        - generic [ref=e750]:
+          - generic [ref=e751]: Setting
+          - generic [ref=e752]: s
+    - generic [ref=e753]:
+      - generic [ref=e756]: My Shift
+      - generic [ref=e757] [cursor=pointer]:
+        - img [ref=e758]
+        - generic [ref=e761]:
+          - generic [ref=e762]: Log
+          - generic [ref=e763]: Time
+      - generic [ref=e764] [cursor=pointer]:
+        - img [ref=e765]
+        - generic [ref=e767]:
+          - generic [ref=e768]: Histor
+          - generic [ref=e769]: "y"
+      - generic [ref=e770] [cursor=pointer]:
+        - img "Attendance" [ref=e771]
+        - generic [ref=e772]:
+          - generic [ref=e773]: Attendanc
+          - generic [ref=e774]: e
+      - generic [ref=e777]: System
+      - generic [ref=e778] [cursor=pointer]:
+        - img [ref=e779]
+        - text: Settings
+    - generic [ref=e782]:
+      - generic [ref=e783]:
+        - generic [ref=e784] [cursor=pointer]: "90"
+        - generic [ref=e786]: "9010719021"
+      - button "Sign Out" [ref=e787] [cursor=pointer]:
+        - img [ref=e788]
+        - text: Sign Out
+  - generic [ref=e791] [cursor=pointer]:
+    - generic [ref=e792]:
+      - generic [ref=e793]: Revenue
+      - generic [ref=e794]: ₹0
+    - generic [ref=e796]:
+      - generic [ref=e797]: Utilization
+      - generic [ref=e798]: 10%
+    - generic [ref=e800]:
+      - generic [ref=e801]: Active Fleet
+      - generic [ref=e802]: 2/9

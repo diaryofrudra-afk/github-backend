@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Suprwise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      corePlugins: { preflight: false },
+      theme: {
+        extend: {
+          colors: {
+            "outline-variant": "#c5c6cd",
+            "secondary-fixed-dim": "#ffb690",
+            "surface-container-high": "#dce9ff",
+            "on-secondary-fixed-variant": "#783200",
+            "primary-fixed": "#d8e3fb",
+            "surface-container": "#e5eeff",
+            "primary": "#091426",
+            "on-primary-fixed": "#111c2d",
+            "inverse-primary": "#bcc7de",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-variant": "#d3e4fe",
+            "surface-container-lowest": "#ffffff",
+            "secondary-container": "#fd761a",
+            "on-error-container": "#93000a",
+            "surface-container-highest": "#d3e4fe",
+            "on-secondary-container": "#5c2400",
+            "on-tertiary-fixed-variant": "#005236",
+            "secondary-fixed": "#ffdbca",
+            "on-secondary": "#ffffff",
+            "surface-dim": "#cbdbf5",
+            "secondary": "#9d4300",
+            "surface-container-low": "#eff4ff",
+            "primary-container": "#1e293b",
+            "error-container": "#ffdad6",
+            "surface-tint": "#545f73",
+            "primary-fixed-dim": "#bcc7de",
+            "surface": "#f8f9ff",
+            "on-secondary-fixed": "#341100",
+            "surface-bright": "#f8f9ff",
+            "on-primary-fixed-variant": "#3c475a",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-surface": "#0b1c30",
+            "on-tertiary-fixed": "#002113",
+            "on-primary-container": "#8590a6",
+            "tertiary-container": "#00301e",
+            "error": "#ba1a1a",
+            "inverse-surface": "#213145",
+            "on-tertiary": "#ffffff",
+            "on-primary": "#ffffff",
+            "on-surface-variant": "#45474c",
+            "on-tertiary-container": "#00a472",
+            "on-background": "#0b1c30",
+            "tertiary": "#00190e",
+            "outline": "#75777d",
+            "inverse-on-surface": "#eaf1ff",
+            "background": "#f8f9ff",
+            "on-error": "#ffffff"
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            full: "9999px"
+          },
+          spacing: {
+            md: "24px",
+            xs: "8px",
+            sm: "16px",
+            base: "4px",
+            lg: "32px",
+            gutter: "24px",
+            xl: "48px",
+            margin: "32px",
+            "container-max": "1440px"
+          },
+          fontFamily: {
+            h1: ["Inter"],
+            h2: ["Inter"],
+            "body-lg": ["Inter"],
+            h3: ["Inter"],
+            button: ["Inter"],
+            "body-md": ["Inter"],
+            "label-md": ["Inter"]
+          },
+          fontSize: {
+            h1: ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            h2: ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "400" }],
+            h3: ["20px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            button: ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "500" }],
+            "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+            "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('rudra_theme') || 'dark')</script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
