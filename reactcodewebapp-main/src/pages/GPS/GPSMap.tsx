@@ -10,38 +10,23 @@ interface GPSMapProps {
   mapRef?: React.MutableRefObject<L.Map | null>;
 }
 
-export function getVehicleCategory(v: UnifiedVehicle): 'working' | 'idle' | 'alert' | 'off' {
-  const hasAlert =
-    v.status === 'wire_disconnected' ||
-    v.is_gps_working === false ||
-    v.is_panic === true ||
-    (v.sli_overload != null && v.sli_overload > 0);
-  if (hasAlert) return 'alert';
-  const engineOn = v.engine_on === true || v.ignition === 'on';
-  if (!engineOn) return 'off';
-  return (v.speed ?? 0) > 2 ? 'working' : 'idle';
+export function getVehicleCategory(v: UnifiedVehicle): 'on' | 'off' {
+  return (v.engine_on === true || v.ignition === 'on') ? 'on' : 'off';
 }
 
 const PIN_COLORS: Record<string, string> = {
-  working: '#34c759',
-  idle:    '#ff9500',
-  alert:   '#ff3b30',
-  off:     '#d1d1d6',
+  on:  '#34c759',
+  off: '#d1d1d6',
 };
 
 function makePin(vehicle: UnifiedVehicle, selected: boolean): L.DivIcon {
   const cat = getVehicleCategory(vehicle);
   const color = PIN_COLORS[cat];
-  const isAlert = cat === 'alert';
-  const isIdle = cat === 'idle';
-  const hasPulse = isAlert || isIdle;
-  const pulseColor = isAlert ? 'red' : 'orange';
 
   return L.divIcon({
     className: '',
     html: `
       <div class="vehicle-marker" style="transform: translate(-50%, -50%);">
-        ${hasPulse ? `<div class="marker-pulse-new ${pulseColor}"></div>` : ''}
         <div class="marker-icon-new" style="${selected ? 'border: 2px solid #ff6b35;' : ''}">
           <svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 19h18"/>
@@ -50,7 +35,7 @@ function makePin(vehicle: UnifiedVehicle, selected: boolean): L.DivIcon {
             <circle cx="7" cy="17" r="1"/>
             <circle cx="17" cy="17" r="1"/>
           </svg>
-          <div class="marker-dot-new ${cat === 'alert' ? 'red' : cat === 'working' ? 'green' : cat === 'idle' ? 'orange' : 'gray'}"></div>
+          <div class="marker-dot-new ${cat === 'on' ? 'green' : 'gray'}"></div>
         </div>
       </div>`,
     iconSize:   [44, 44],

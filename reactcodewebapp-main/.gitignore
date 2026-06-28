@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# tsc artifacts — tsconfig is noEmit; these must never be committed (they shadow the
+# real .tsx/.ts source and create config ambiguity). See CLAUDE.md "Local dev invariants".
+/vite.config.js
+/vite.config.js.map
+/vite.config.d.ts
+/vite.config.d.ts.map
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts.map
+# emitted declaration files under src (authored ones are whitelisted below)
+src/**/*.d.ts
+!src/vite-env.d.ts
+!src/types/globals.d.ts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

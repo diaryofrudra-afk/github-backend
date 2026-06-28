@@ -57,12 +57,11 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
       setUser(res.phone || res.email || null);
       setUserRole(res.role);
       if (res.role === 'operator') {
-        // Redirect operators to the dedicated operator app
-        window.location.href = '/operator/';
+        setActivePage('logger');
       } else {
         setActivePage('fleet');
-        loadDataFromAPI();
       }
+      loadDataFromAPI();
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Google authentication failed');
     } finally {
@@ -116,12 +115,11 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
         setUser(res.phone);
         setUserRole(res.role);
         if (res.role === 'operator') {
-          // Redirect operators to the dedicated operator app
-          window.location.href = '/operator/';
+          setActivePage('logger');
         } else {
           setActivePage('fleet');
-          loadDataFromAPI();
         }
+        loadDataFromAPI();
       }
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Authentication failed');
@@ -140,12 +138,11 @@ export function AuthPage({ loadDataFromAPI }: { loadDataFromAPI: () => void }) {
       setUser(res.phone);
       setUserRole(res.role);
       if (res.role === 'operator') {
-        // Redirect operators to the dedicated operator app
-        window.location.href = '/operator/';
+        setActivePage('logger');
       } else {
         setActivePage('fleet');
-        loadDataFromAPI();
       }
+      loadDataFromAPI();
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Test login failed');
     } finally {

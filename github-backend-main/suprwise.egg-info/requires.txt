@@ -1,6 +1,0 @@
-fastapi
-uvicorn
-aiosqlite
-pydantic
-bcrypt
-python-jose

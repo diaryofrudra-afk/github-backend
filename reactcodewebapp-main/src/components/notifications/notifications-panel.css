@@ -1,0 +1,425 @@
+/* Shared notification panel styles — used by the GPS page dropdown
+   (variant="dropdown") and the global mobile header sheet (variant="sheet").
+   Moved here from GPSPageNew.css so the styles travel with the component and
+   apply even when the GPS page isn't mounted. The GPS page scopes --gps-*
+   tokens to .gps-page-container; outside that scope we fall back to the global
+   tokens so the sheet renders correctly anywhere. */
+
+.notif-wrap {
+  position: relative;
+}
+
+.notif-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 998;
+  background: transparent;
+}
+
+.notif-dropdown-overhaul {
+  position: absolute;
+  top: 32px;
+  left: -160px;
+  width: 350px;
+  max-height: 485px;
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--rmd);
+  box-shadow: var(--shm);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: notif-slide-down 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: 160px top;
+}
+
+[data-theme="light"] .notif-dropdown-overhaul {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Mobile full-width sheet, anchored below the global header and above the
+   safe-area bottom; the list flex-grows and scrolls internally so it's never
+   clipped. */
+.notif-panel-sheet {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 70px);
+  left: 12px;
+  right: 12px;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 150px);
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shm);
+  z-index: 4001;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: notif-slide-down 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .notif-panel-sheet {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.notif-panel-sheet .notif-list-overhaul {
+  flex: 1;
+  max-height: none;
+}
+
+@keyframes notif-slide-down {
+  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gps-panel-border, var(--border));
+  background: var(--bg2);
+}
+
+.notif-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-header-title h3 {
+  font-family: var(--fh);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t1);
+  margin: 0;
+}
+
+.notif-count-pill {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--accent-s);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: var(--rf);
+  border: 1px solid var(--accent-g);
+}
+
+.notif-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notif-action-link {
+  background: none;
+  border: none;
+  font-family: var(--fb);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t2);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.notif-action-link:hover {
+  color: var(--accent);
+  background: var(--gps-surface, var(--bg4));
+}
+
+.notif-action-link.danger:hover {
+  color: var(--red);
+  background: var(--red-s);
+}
+
+.notif-close-x {
+  background: none;
+  border: none;
+  color: var(--t3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.notif-close-x:hover {
+  color: var(--t1);
+  background: var(--gps-surface-hover, var(--bg5));
+}
+
+.notif-list-overhaul {
+  overflow-y: auto;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-list-overhaul::-webkit-scrollbar {
+  width: 5px;
+}
+
+.notif-list-overhaul::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notif-list-overhaul::-webkit-scrollbar-thumb {
+  background: var(--gps-panel-border, var(--border));
+  border-radius: 4px;
+}
+
+.notif-list-overhaul::-webkit-scrollbar-thumb:hover {
+  background: var(--t4);
+}
+
+.notif-empty-state {
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.notif-empty-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gps-surface, var(--bg4));
+  color: var(--t3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border: 1px dashed var(--gps-panel-border, var(--border));
+}
+
+.notif-empty-state h4 {
+  font-family: var(--fh);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 4px;
+}
+
+.notif-empty-state p {
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1.45;
+  max-width: 220px;
+}
+
+.notif-card-item {
+  display: flex;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gps-panel-border, var(--border));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 12px;
+  position: relative;
+}
+
+.notif-card-item:hover {
+  background: var(--gps-panel-bg-hover, var(--bg4));
+}
+
+.notif-card-item.unread {
+  background: rgba(232, 115, 42, 0.02);
+}
+
+.notif-card-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background-color 0.2s;
+}
+
+.notif-card-item.unread::before {
+  background: var(--accent);
+}
+
+.notif-card-item.type-error::before {
+  background: var(--red);
+}
+
+.notif-card-item.type-warning::before {
+  background: var(--amber);
+}
+
+.notif-card-item.type-success::before {
+  background: var(--green);
+}
+
+.notif-card-icon-container {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notif-card-icon-container.engine-on {
+  background: var(--green-g);
+  color: var(--green);
+}
+
+.notif-card-icon-container.engine-off {
+  background: var(--red-s);
+  color: var(--red);
+}
+
+.notif-card-icon-container.doc-expiry {
+  background: var(--red-s);
+  color: var(--red);
+}
+
+.notif-card-icon-container.doc-warning {
+  background: var(--amber-s);
+  color: var(--amber);
+}
+
+.notif-card-icon-container.logbook {
+  background: var(--accent-s);
+  color: var(--accent);
+}
+
+.notif-card-icon-container.general-info {
+  background: var(--accent-s);
+  color: var(--accent);
+}
+
+.notif-card-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-card-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.notif-card-title {
+  font-family: var(--fh);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t1);
+  line-height: 1.25;
+}
+
+.notif-card-unread-indicator {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.notif-card-meta {
+  margin-bottom: 5px;
+}
+
+.notif-plate-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5px 5px;
+  background: var(--bg4);
+  border: 1px solid var(--gps-panel-border, var(--border));
+  border-radius: 4px;
+  font-family: var(--fm);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+[data-theme="light"] .notif-plate-badge {
+  background: #f1f2f6;
+  border-color: #dcdde1;
+  color: #2f3640;
+}
+
+.notif-card-msg {
+  font-size: 11.5px;
+  color: var(--t2);
+  line-height: 1.4;
+  word-wrap: break-word;
+  margin-bottom: 5px;
+}
+
+.notif-address-text {
+  color: var(--t2);
+  font-size: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.notif-address-text svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: var(--t3);
+}
+
+.notif-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.notif-card-time {
+  font-size: 10px;
+  color: var(--t3);
+  font-weight: 500;
+}
+
+.notif-card-read-btn {
+  background: var(--bg3);
+  border: 1px solid var(--gps-panel-border, var(--border));
+  color: var(--t3);
+  cursor: pointer;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.notif-card-item:hover .notif-card-read-btn {
+  opacity: 1;
+}
+
+.notif-card-read-btn:hover {
+  background: var(--accent-s);
+  color: var(--accent);
+  border-color: var(--accent);
+}

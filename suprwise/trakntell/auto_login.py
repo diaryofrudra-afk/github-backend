@@ -120,9 +120,128 @@ async def _js_fill_input(page, input_index: int, value: str, label: str, field_n
 
 # ── Main login function ──────────────────────────────────────────────────────
 
+async def trakntell_http_login(username: str, password: str) -> dict:
+    """
+    Perform direct HTTP-based login to Trak N Tell.
+    Faster (under 3 seconds) and avoids browser launch overhead.
+    """
+    import httpx
+    
+    # ── Strategy 1: Direct POST (Fastest: ~0.6s) ──
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://web.trakntell.com/tnt/jsp/login.jsp"
+            }
+            data = {
+                "userid": username,
+                "password": password,
+                ".pass": "https://web.trakntell.com/tnt/servlet/tntWebCurrentStatusMain",
+                ".fail": "https://web.trakntell.com/tnt/jsp/login.jsp",
+                "remember": "on",
+                "submit": "Login"
+            }
+            resp = await client.post("https://web.trakntell.com/tnt/servlet/peLogin", data=data, headers=headers)
+            
+            body_lower = resp.text.lower()
+            if "invalid" in body_lower or "incorrect" in body_lower or "error" in body_lower:
+                return {"success": False, "error": "Trak N Tell login failed: invalid credentials."}
+                
+            match = re.search(r'iframe.*?src=["\'](https://[^\'"]+TrakMTell\.com[^\'"]+)["\']', resp.text, re.IGNORECASE)
+            if match:
+                iframe_url = match.group(1)
+                parsed = urlparse(iframe_url)
+                params = parse_qs(parsed.query)
+                
+                user_id = (params.get("u") or params.get("userId") or params.get("user_id") or [None])[0]
+                user_id_encrypt = (params.get("userIdEncrypt") or params.get("user_id_encrypt") or [None])[0]
+                orgid = (params.get("orgid") or params.get("orgId") or [None])[0]
+                
+                if user_id and orgid:
+                    cookies_dict = {c.name: c.value for c in client.cookies.jar}
+                    tnt_s = cookies_dict.get("tnt_s")
+                    jsessionid = cookies_dict.get("JSESSIONID") or tnt_s
+                    
+                    if tnt_s:
+                        return {
+                            "success": True,
+                            "user_id": user_id,
+                            "user_id_encrypt": user_id_encrypt,
+                            "orgid": orgid,
+                            "sessionid": jsessionid,
+                            "tnt_s": tnt_s,
+                            "error": None,
+                        }
+    except Exception as e:
+        logger.warning(f"[TrakNTell] Strategy 1 (Direct POST) failed: {e}")
+
+    # ── Strategy 2: GET login.jsp then POST (Robust: ~1.4s) ──
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+            # 1. GET login page to obtain initial session cookies
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            await client.get(TNT_LOGIN_URL, headers=headers)
+            
+            # 2. POST to peLogin servlet
+            data = {
+                "userid": username,
+                "password": password,
+                ".pass": "https://web.trakntell.com/tnt/servlet/tntWebCurrentStatusMain",
+                ".fail": "https://web.trakntell.com/tnt/jsp/login.jsp",
+                "remember": "on",
+                "submit": "Login"
+            }
+            headers["Referer"] = TNT_LOGIN_URL
+            resp = await client.post("https://web.trakntell.com/tnt/servlet/peLogin", data=data, headers=headers)
+            
+            # 3. Detect invalid credentials or failure
+            body_lower = resp.text.lower()
+            if "invalid" in body_lower or "incorrect" in body_lower or "error" in body_lower:
+                return {"success": False, "error": "Trak N Tell login failed: invalid credentials."}
+                
+            # 4. Extract iframe URL from HTML
+            match = re.search(r'iframe.*?src=["\'](https://[^\'"]+TrakMTell\.com[^\'"]+)["\']', resp.text, re.IGNORECASE)
+            if not match:
+                return {"success": False, "error": "Could not find mapsweb iframe in login response."}
+                
+            iframe_url = match.group(1)
+            parsed = urlparse(iframe_url)
+            params = parse_qs(parsed.query)
+            
+            user_id = (params.get("u") or params.get("userId") or params.get("user_id") or [None])[0]
+            user_id_encrypt = (params.get("userIdEncrypt") or params.get("user_id_encrypt") or [None])[0]
+            orgid = (params.get("orgid") or params.get("orgId") or [None])[0]
+            
+            if not user_id or not orgid:
+                return {"success": False, "error": "Missing user_id or orgid in iframe URL."}
+                
+            cookies_dict = {c.name: c.value for c in client.cookies.jar}
+            tnt_s = cookies_dict.get("tnt_s")
+            jsessionid = cookies_dict.get("JSESSIONID") or tnt_s
+            
+            if not tnt_s:
+                return {"success": False, "error": "tnt_s cookie not found."}
+                
+            return {
+                "success": True,
+                "user_id": user_id,
+                "user_id_encrypt": user_id_encrypt,
+                "orgid": orgid,
+                "sessionid": jsessionid,
+                "tnt_s": tnt_s,
+                "error": None,
+            }
+    except Exception as e:
+        logger.error(f"[TrakNTell] HTTP-based login failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
 async def trakntell_headless_login(username: str, password: str) -> dict:
     """
-    Perform headless Playwright login to Trak N Tell.
+    Perform Playwright login to Trak N Tell (falls back to headless browser if HTTP fast path fails).
 
     Returns:
         {
@@ -135,10 +254,25 @@ async def trakntell_headless_login(username: str, password: str) -> dict:
             "error": str | None,
         }
     """
+    # ── Fast path: Direct HTTP Login ──
+    logger.info(f"[TrakNTell] Attempting fast HTTP login path for {username}...")
+    http_result = await trakntell_http_login(username, password)
+    if http_result["success"]:
+        logger.info(f"[TrakNTell] Fast HTTP login succeeded for {username}")
+        return http_result
+    
+    # If invalid credentials error, do not retry with browser as it would fail anyway
+    if http_result.get("error") and "invalid credentials" in http_result["error"].lower():
+        logger.warning(f"[TrakNTell] Fast HTTP login failed (invalid credentials): {http_result.get('error')}")
+        return http_result
+
+    logger.warning(f"[TrakNTell] Fast HTTP login failed: {http_result.get('error')}. Falling back to Playwright...")
+
     try:
         from playwright.async_api import async_playwright
     except ImportError:
         return {"success": False, "error": "playwright not installed. Run: pip install playwright && playwright install chromium"}
+
 
     result: dict = {
         "success": False,

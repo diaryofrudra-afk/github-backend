@@ -37,6 +37,10 @@ export function LineItemRow({
   onDragStart, onDragOver, onDrop, onDragEnd,
 }: Props) {
   const [open, setOpen] = useState(false);
+  // Only allow dragging when initiated from the grip handle. Making the whole
+  // row draggable blocks text entry in the inputs (you can't focus/select a
+  // field inside a draggable element in several browsers, e.g. Firefox).
+  const [rowDraggable, setRowDraggable] = useState(false);
 
   const cls = [
     'de-item-row',
@@ -49,13 +53,18 @@ export function LineItemRow({
     <>
       <div
         className={cls}
-        draggable
+        draggable={rowDraggable}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDrop={onDrop}
-        onDragEnd={onDragEnd}
+        onDragEnd={() => { setRowDraggable(false); onDragEnd(); }}
       >
-        <div className="de-drag-handle" aria-label="Drag to reorder">
+        <div
+          className="de-drag-handle"
+          aria-label="Drag to reorder"
+          onMouseDown={() => setRowDraggable(true)}
+          onMouseUp={() => setRowDraggable(false)}
+        >
           <GripIcon />
         </div>
         <div className="de-item-main">
@@ -71,38 +80,50 @@ export function LineItemRow({
             <span>GST: {row.gstRate}%</span>
           </div>
         </div>
-        <div className="de-item-num">
-          <input
-            value={row.hsn}
-            onChange={e => onChange({ hsn: e.target.value })}
-            placeholder="HSN"
-          />
-        </div>
-        <div className="de-item-num">
-          <input
-            type="number"
-            min={0}
-            value={row.qty}
-            onChange={e => onChange({ qty: Number(e.target.value) || 0 })}
-          />
-          <div className="step">
-            <button type="button" onClick={() => onChange({ qty: row.qty + 1 })}>▲</button>
-            <button type="button" onClick={() => onChange({ qty: Math.max(0, row.qty - 1) })}>▼</button>
+        <div className="de-item-field">
+          <span className="de-item-mobile-label">HSN</span>
+          <div className="de-item-num">
+            <input
+              value={row.hsn}
+              onChange={e => onChange({ hsn: e.target.value })}
+              placeholder="HSN"
+            />
           </div>
         </div>
-        <div className="de-item-num">
-          <input
-            type="number"
-            min={0}
-            value={row.rate}
-            onChange={e => onChange({ rate: Number(e.target.value) || 0 })}
-          />
-          <div className="step">
-            <button type="button" onClick={() => onChange({ rate: row.rate + 100 })}>▲</button>
-            <button type="button" onClick={() => onChange({ rate: Math.max(0, row.rate - 100) })}>▼</button>
+        <div className="de-item-field">
+          <span className="de-item-mobile-label">Qty / Hours</span>
+          <div className="de-item-num">
+            <input
+              type="number"
+              min={0}
+              value={row.qty}
+              onChange={e => onChange({ qty: Number(e.target.value) || 0 })}
+            />
+            <div className="step">
+              <button type="button" onClick={() => onChange({ qty: row.qty + 1 })}>▲</button>
+              <button type="button" onClick={() => onChange({ qty: Math.max(0, row.qty - 1) })}>▼</button>
+            </div>
           </div>
         </div>
-        <div className="de-item-amount">{fmtINR(amount)}</div>
+        <div className="de-item-field">
+          <span className="de-item-mobile-label">Rate</span>
+          <div className="de-item-num">
+            <input
+              type="number"
+              min={0}
+              value={row.rate}
+              onChange={e => onChange({ rate: Number(e.target.value) || 0 })}
+            />
+            <div className="step">
+              <button type="button" onClick={() => onChange({ rate: row.rate + 100 })}>▲</button>
+              <button type="button" onClick={() => onChange({ rate: Math.max(0, row.rate - 100) })}>▼</button>
+            </div>
+          </div>
+        </div>
+        <div className="de-item-field de-item-field-amount">
+          <span className="de-item-mobile-label">Amount</span>
+          <div className="de-item-amount">{fmtINR(amount)}</div>
+        </div>
         <div
           className={`de-expand-handle${open ? ' open' : ''}`}
           onClick={() => setOpen(o => !o)}

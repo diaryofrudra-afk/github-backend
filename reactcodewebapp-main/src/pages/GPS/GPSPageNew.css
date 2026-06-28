@@ -43,24 +43,6 @@
 }
 
 /* Header Styles */
-.gps-header {
-  height: 64px;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--gps-panel-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  position: relative;
-  z-index: 110;
-}
-
-.header-left h1 {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--t1);
-}
 
 .date-line {
   font-size: 13px;
@@ -84,39 +66,6 @@
   50% { opacity: 0.4; }
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.gps-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg3);
-  border-radius: 10px;
-  padding: 8px 14px;
-  width: 260px;
-  border: 1px solid var(--gps-panel-border);
-  transition: all 0.2s;
-}
-
-.gps-search-bar:focus-within {
-  border-color: var(--accent);
-  background: var(--bg4);
-}
-
-.gps-search-bar input {
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 13px;
-  flex: 1;
-  color: var(--t1);
-}
-
-.gps-search-bar input::placeholder { color: var(--t3); }
 
 .header-btn {
   width: 36px;
@@ -144,103 +93,55 @@
   color: currentColor;
 }
 
-.notification-badge {
+.header-btn.active {
+  background: var(--bg4);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notification-badge-pulse {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 16px;
-  height: 16px;
-  background: var(--red);
-  color: white;
-  font-size: 9px;
-  font-weight: 700;
-  border-radius: 50%;
+  top: 2px;
+  right: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--bg2);
 }
 
-/* Notifications dropdown */
-.notif-wrap {
-  position: relative;
+.notification-badge-pulse .badge-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg2);
 }
 
-.notif-dropdown {
+.notification-badge-pulse .badge-ping {
   position: absolute;
-  top: 44px;
-  right: 0;
-  width: 320px;
-  max-height: 420px;
-  background: var(--bg2);
-  border: 1px solid var(--gps-panel-border);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  width: 14px;
+  height: 14px;
+  background: var(--red);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: badge-ping-anim 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
-.notif-dropdown-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--t1);
-  border-bottom: 1px solid var(--gps-panel-border);
+@keyframes badge-ping-anim {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 
-.notif-clear-btn {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
+@keyframes bell-swing {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(15deg); }
+  40%, 80% { transform: rotate(-15deg); }
 }
 
-.notif-list {
-  overflow-y: auto;
-  max-height: 360px;
+.has-unread:hover .notif-bell-icon {
+  animation: bell-swing 1s ease-in-out;
+  transform-origin: top center;
 }
 
-.notif-empty {
-  padding: 24px 14px;
-  text-align: center;
-  color: var(--t3);
-  font-size: 13px;
-}
-
-.notif-item {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--gps-panel-border);
-  cursor: pointer;
-  border-left: 3px solid transparent;
-  transition: background 0.15s;
-}
-
-.notif-item:hover { background: var(--bg3); }
-.notif-item.unread { background: var(--bg3); border-left-color: var(--accent); }
-.notif-item.type-warn { border-left-color: var(--red); }
-.notif-item.type-success.unread { border-left-color: var(--green, #22c55e); }
-
-.notif-msg {
-  font-size: 13px;
-  color: var(--t1);
-  line-height: 1.4;
-}
-
-.notif-item.read .notif-msg { color: var(--t2); }
-
-.notif-time {
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--t3);
-}
 
 /* Map Container */
 .map-container {
@@ -278,59 +179,47 @@
 
 .fleet-status-title svg { width: 16px; height: 16px; color: var(--t3); }
 
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 4px;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.15s;
-  color: var(--t2);
-}
-
-.status-row:hover { background: var(--gps-surface-hover); }
-
-.status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.on { background: #34c759; }
 .status-dot.working { background: #34c759; }
 .status-dot.idle { background: #ff9500; }
 .status-dot.needs-attention { background: #ff3b30; }
 .status-dot.off { background: #d1d1d6; }
 
-.status-label { flex: 1; }
-.status-count { color: var(--t3); font-weight: 500; }
-
-.status-filters {
+/* Compact engine on/off summary (replaces the old rows + filter pills). */
+.status-summary {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
-  margin-top: 14px;
 }
 
-.status-filter-btn {
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
   border: 1px solid var(--gps-panel-border);
   background: var(--gps-surface);
-  cursor: pointer;
-  transition: all 0.2s;
   color: var(--t2);
   font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.status-filter-btn:hover { background: var(--gps-surface-hover); color: var(--t1); }
-.status-filter-btn.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+.status-chip:hover { background: var(--gps-surface-hover); color: var(--t1); }
+.status-chip.active { border-color: var(--accent); color: var(--t1); }
+
+.status-chip-count {
+  font-weight: 800;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
 }
 
 .map-controls {
   position: absolute;
-  bottom: 184px;
+  bottom: 16px;
   left: 16px;
   display: flex;
   flex-direction: column;
@@ -358,6 +247,14 @@
 .map-ctrl-btn:hover { background: var(--gps-panel-bg-hover); color: var(--t1); }
 .map-ctrl-btn svg { width: 18px; height: 18px; color: currentColor; }
 
+/* Refresh-in-progress: icon turns accent and spins (refresh + fleet sync). */
+.map-ctrl-btn.syncing { color: var(--accent); border-color: var(--accent); }
+.map-ctrl-btn.syncing svg { animation: gps-spin 0.8s linear infinite; }
+
+@keyframes gps-spin {
+  to { transform: rotate(360deg); }
+}
+
 .vehicle-panel {
   position: absolute;
   top: 16px;
@@ -371,7 +268,7 @@
   padding: 20px;
   box-shadow: var(--gps-panel-shadow);
   z-index: 100;
-  max-height: calc(100vh - 200px);
+  max-height: calc(100% - 32px);
   overflow-y: auto;
 }
 
@@ -576,10 +473,7 @@
   border-top: 1px solid var(--gps-panel-border);
   padding: 16px 24px;
   z-index: 100;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.28);
 }
 
@@ -587,6 +481,83 @@
   display: flex;
   align-items: center;
   gap: 18px;
+  min-height: 0; /* keep the flex row from breaking the strip's width/scroll calc */
+}
+
+/* Mobile-only fleet search row — hidden on desktop, shown in the mobile media block */
+.fleet-search-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.fleet-search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.fleet-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--t3);
+  pointer-events: none;
+}
+
+.fleet-search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border-radius: 12px;
+  border: 1px solid var(--gps-panel-border);
+  background: var(--gps-surface);
+  color: var(--t1);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+.fleet-search-input::placeholder { color: var(--t3); }
+.fleet-search-input:focus {
+  border-color: var(--accent);
+  background: var(--gps-surface-hover);
+}
+
+.fleet-sheet-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gps-panel-border);
+  background: var(--gps-surface);
+  color: var(--t2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fleet-sheet-toggle svg { transition: transform 0.2s ease; }
+.fleet-sheet-toggle.open svg { transform: rotate(180deg); }
+
+/* Chevron scroll button for the fleet strip (rendered as a <button>) */
+.fleet-chip-scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+.fleet-chip-scroll-hint:hover {
+  background: var(--gps-surface-hover);
+  color: var(--t1) !important;
 }
 
 .fleet-title-label {
@@ -604,6 +575,7 @@
   gap: 10px;
   overflow-x: auto;
   flex: 1;
+  min-width: 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -716,4 +688,136 @@
 @keyframes markerPulse {
   0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  /* Fill the area between the global header and the floating tab bar instead of
+     overflowing the viewport (which pushed the bottom strip off-screen). */
+  .mobile-owner-shell .gps-page-container {
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - 64px);
+    min-height: 0;
+  }
+
+  /* The global header bell owns notifications on mobile — hide the GPS one. */
+  .mobile-owner-shell .gps-page-container .notif-wrap {
+    display: none;
+  }
+
+  .mobile-owner-shell .fleet-status-panel {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    min-width: 0;
+    width: auto;
+    padding: 12px;
+    border-radius: 16px;
+    z-index: 30;
+  }
+
+  .mobile-owner-shell .fleet-status-title {
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  /* Keep the action buttons on one row — wrapping wasted vertical space. */
+  .mobile-owner-shell .fleet-status-title > div:last-child {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+
+  .mobile-owner-shell .notif-dropdown-overhaul {
+    left: auto;
+    right: -12px;
+    width: calc(100vw - 24px);
+    max-height: 400px;
+    z-index: 1000;
+  }
+
+  .mobile-owner-shell .map-controls {
+    left: auto;
+    right: 12px;
+    bottom: 178px;
+    z-index: 20;
+  }
+
+  .mobile-owner-shell .vehicle-panel {
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 150px);
+    width: auto;
+    max-height: min(48dvh, 460px);
+    padding: 16px;
+    border-radius: 18px;
+    z-index: 35;
+  }
+
+  .mobile-owner-shell .vehicle-actions {
+    flex-direction: column;
+  }
+
+  /* Float the fleet strip clear of the floating bottom tab bar (~84px tall). */
+  .mobile-owner-shell .bottom-section {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
+    padding: 10px;
+    border: 1px solid var(--gps-panel-border);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column-reverse; /* search bar at bottom, chips expand upward */
+    gap: 0;
+    z-index: 25;
+  }
+  .mobile-owner-shell .bottom-section.open {
+    gap: 10px;
+  }
+
+  .mobile-owner-shell .fleet-search-row {
+    display: flex;
+  }
+
+  /* Chip list is collapsed by default; expands when the strip is open. */
+  .mobile-owner-shell .bottom-section-inner {
+    align-items: stretch;
+    gap: 10px;
+    flex-direction: column;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+  }
+  .mobile-owner-shell .bottom-section.open .bottom-section-inner {
+    max-height: min(42dvh, 360px);
+    overflow-y: auto;
+    opacity: 1;
+  }
+
+  /* Stack chips vertically as a full-width list when expanded. */
+  .mobile-owner-shell .bottom-section .fleet-chips {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .mobile-owner-shell .fleet-title-label {
+    font-size: 11px;
+  }
+
+  .mobile-owner-shell .fleet-chip-scroll-hint {
+    display: none;
+  }
+
+  .mobile-owner-shell .fleet-chip {
+    padding: 10px 12px;
+  }
+
+  .mobile-owner-shell .chip-name {
+    font-size: 12px;
+  }
+
+  .mobile-owner-shell .chip-id {
+    font-size: 10px;
+  }
 }

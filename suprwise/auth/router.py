@@ -91,7 +91,7 @@ async def login(req: LoginReq, db=Depends(get_db)):
         raise HTTPException(401, "Phone number not found")
 
     if not verify_password(req.password, row["password_hash"]):
-        raise HTTPException(401, "Invalid credentials")
+        raise HTTPException(401, "Incorrect password")
 
     token = create_jwt(row["id"], row["tenant_id"], row["role"], row["phone"])
     return TokenResp(

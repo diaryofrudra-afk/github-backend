@@ -4,7 +4,6 @@ import { fmtINR, todayISO } from '../../utils';
 import { api } from '../../services/api';
 import type { FuelEntry } from '../../types';
 
-import { PageContainer } from '../../components/ui/PageContainer';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { StatCard } from '../../components/ui/StatCard';
 import { SearchInput } from '../../components/ui/SearchInput';
@@ -98,14 +97,13 @@ export function FuelPage({ active }: { active: boolean }) {
   );
 
   return (
-    <PageContainer id="page-fuel" active={active} className="fuel-page">
-      <div className="p-5 border-b border-[var(--border)] bg-gradient-to-b from-[var(--accent-s)] to-[var(--bg4)]">
-        <PageHeader 
-          title="Fuel" 
-          subtitle="Monitor and manage fuel consumption"
-          icon={<Droplet size={20} />}
-          iconBgClass="bg-orange-500 shadow-orange-100"
-        >
+    <div className={`page fuel-page ${active ? 'active' : ''}`} id="page-fuel">
+      <PageHeader 
+        title="Fuel" 
+        subtitle="Monitor and manage fuel consumption"
+        icon={<Droplet size={20} />}
+        iconBgClass="bg-orange-500"
+      >
           <button className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg4)] px-4 text-xs font-bold text-[var(--t1)] transition hover:bg-[var(--bg5)]" onClick={() => showToast('Export feature coming soon', 'info')}>
             <Download size={16} className="text-[var(--t4)]" />
             Export
@@ -124,22 +122,22 @@ export function FuelPage({ active }: { active: boolean }) {
             icon={<Droplet size={18} />}
             label="Consumed"
             value={`${totalLitres.toFixed(1)} L`}
-            colorClass="text-orange-600"
-            bgClass="bg-orange-50"
+            colorClass="text-orange-600 dark:text-orange-400"
+            bgClass="bg-orange-500/10 dark:bg-orange-500/20"
           />
           <StatCard
             icon={<IndianRupee size={18} />}
             label="Fuel Cost"
             value={fmtINR(totalCost)}
-            colorClass="text-blue-600"
-            bgClass="bg-blue-50"
+            colorClass="text-blue-600 dark:text-blue-400"
+            bgClass="bg-blue-500/10 dark:bg-blue-500/20"
           />
           <StatCard
             icon={<Tag size={18} />}
             label="Avg Price"
             value={`₹${avgCost.toFixed(2)}/L`}
-            colorClass="text-green-600"
-            bgClass="bg-green-50"
+            colorClass="text-green-600 dark:text-green-400"
+            bgClass="bg-green-500/10 dark:bg-green-500/20"
           />
           <StatCard
             icon={<Droplet size={18} />}
@@ -149,15 +147,14 @@ export function FuelPage({ active }: { active: boolean }) {
             bgClass="bg-[var(--bg5)]"
           />
         </div>
-      </div>
 
-      <div className="p-5 flex-1 bg-[var(--bg3)] overflow-y-auto">
+      <div className="mt-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <h3 className="text-sm font-bold text-[var(--t1)]">Active Assets</h3>
           <SearchInput value={assetSearch} onChange={setAssetSearch} placeholder="Search vehicle..." />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {!cranes.length ? (
             <div className="col-span-full rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg4)] px-6 py-12 text-center">
               <p className="text-[var(--t3)] font-medium">Add fleet assets first</p>
@@ -187,7 +184,7 @@ export function FuelPage({ active }: { active: boolean }) {
                 <article key={crane.reg} className="bg-[var(--bg4)] rounded-2xl p-5 border border-[var(--border)] transition-all hover:-translate-y-1 hover:shadow-lg flex flex-col group">
                   <header className="flex justify-between items-start mb-4">
                     <div className="flex gap-4 items-center">
-                      <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-sm border border-orange-100">
+                      <div className="w-12 h-12 rounded-xl bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 shadow-sm border border-orange-100 dark:border-orange-900/30">
                         <Droplet size={20} />
                       </div>
                       <div>
@@ -280,7 +277,7 @@ export function FuelPage({ active }: { active: boolean }) {
           <div className="bg-[var(--bg4)] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg3)]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
                   <Droplet size={20} />
                 </div>
                 <div>
@@ -350,9 +347,9 @@ export function FuelPage({ active }: { active: boolean }) {
               <button className="px-5 py-2.5 bg-[var(--bg4)] border border-[var(--border)] rounded-xl text-sm font-bold text-[var(--t2)] hover:bg-[var(--bg5)] transition shadow-sm" onClick={() => setModalOpen(false)}>Cancel</button>
               <button className="px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition shadow-md shadow-orange-200" onClick={saveFuelEntry}>Save Entry</button>
             </div>
-          </div>
         </div>
-      )}
-    </PageContainer>
-  );
+      </div>
+    )}
+  </div>
+);
 }

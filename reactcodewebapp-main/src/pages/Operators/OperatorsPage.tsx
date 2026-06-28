@@ -3,7 +3,6 @@ import { useApp } from '../../context/AppContext';
 import { Modal } from '../../components/ui/Modal';
 import { ImageCropper } from '../../components/ui/ImageCropper';
 import { api } from '../../services/api';
-import { PageContainer } from '../../components/ui/PageContainer';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Users, Plus, Edit2, Trash2, IndianRupee } from 'lucide-react';
@@ -144,11 +143,16 @@ export function OperatorsPage({ active }: { active: boolean }) {
     if (!assignOpId || !selectedCraneId) return;
     const crane = state.cranes.find(c => c.id === selectedCraneId);
     if (!crane) return;
+    // Store the operator's PHONE as the assignment key — this is the system-wide
+    // operator key (timesheets, attendance, the operator app all match on phone),
+    // and matches what the Fleet/Assets pages write. Falls back to id if no phone.
+    const op = state.operators.find(o => o.id === assignOpId);
+    const operatorKey = op?.phone || assignOpId;
     try {
-      await api.updateCrane(crane.id, { operator: assignOpId });
+      await api.updateCrane(crane.id, { operator: operatorKey });
       setState(prev => ({
         ...prev,
-        cranes: prev.cranes.map(c => c.id === selectedCraneId ? { ...c, operator: assignOpId } : c)
+        cranes: prev.cranes.map(c => c.id === selectedCraneId ? { ...c, operator: operatorKey } : c)
       }));
       setAssignOpId(null);
       showToast('Asset assigned');
@@ -158,23 +162,21 @@ export function OperatorsPage({ active }: { active: boolean }) {
   }
 
   return (
-    <PageContainer id="page-operators" active={active} className="operators-page">
-      <div className="p-5 border-b border-[var(--border)] bg-gradient-to-b from-[var(--accent-s)] to-[var(--bg4)]">
-        <PageHeader 
-          title="Operators" 
-          subtitle="Workforce Management"
-          icon={<Users size={20} />}
-          iconBgClass="bg-blue-500 shadow-blue-100"
-        >
-          <SearchInput value={search} onChange={setSearch} placeholder="Search operators..." />
-          <button className="flex h-10 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-xs font-bold text-white transition hover:bg-[var(--accent-solid)]" onClick={openAdd}>
-            <Plus size={16} />
-            Add Operator
-          </button>
-        </PageHeader>
-      </div>
+    <div className={`page operators-page ${active ? 'active' : ''}`} id="page-operators">
+      <PageHeader 
+        title="Operators" 
+        subtitle="Workforce Management"
+        icon={<Users size={20} />}
+        iconBgClass="bg-blue-500"
+      >
+        <SearchInput value={search} onChange={setSearch} placeholder="Search operators..." />
+        <button className="flex h-10 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-xs font-bold text-white transition hover:bg-[var(--accent-solid)]" onClick={openAdd}>
+          <Plus size={16} />
+          Add Operator
+        </button>
+      </PageHeader>
 
-      <div className="p-5 bg-[var(--bg3)] flex-1 overflow-y-auto">
+      <div className="mt-8">
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filtered.length === 0 ? (
             <div className="col-span-full rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg4)] px-6 py-12 text-center">
@@ -209,7 +211,7 @@ export function OperatorsPage({ active }: { active: boolean }) {
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openEdit(op.id)} className="p-1.5 text-[var(--t4)] hover:text-[var(--t2)] hover:bg-[var(--bg5)] rounded-lg transition"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(op.id)} className="p-1.5 text-[var(--t4)] hover:text-red-500 hover:bg-red-50 rounded-lg transition"><Trash2 size={14} /></button>
+                      <button onClick={() => handleDelete(op.id)} className="p-1.5 text-[var(--t4)] hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition"><Trash2 size={14} /></button>
                     </div>
                   </header>
 
@@ -225,7 +227,7 @@ export function OperatorsPage({ active }: { active: boolean }) {
                   </section>
 
                   <footer className="grid grid-cols-2 gap-2 mt-auto">
-                    {!crane && <button onClick={() => openAssign(op.id)} className="h-9 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 rounded-xl text-[11px] font-bold transition">Assign</button>}
+                    {!crane && <button onClick={() => openAssign(op.id)} className="h-9 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-500/20 dark:hover:bg-blue-500/30 rounded-xl text-[11px] font-bold transition">Assign</button>}
                     <button 
                       onClick={() => {
                         const amt = prompt(`Enter advance amount to pay ${op.name}:`);
@@ -328,9 +330,8 @@ export function OperatorsPage({ active }: { active: boolean }) {
           <button className="btn-sm accent" onClick={() => setTempPassInfo(null)} style={{ width: '100%', height: 48, borderRadius: 12, fontWeight: 800 }}>Done</button>
         </div>
       </Modal>
-
       {cropSrc && <ImageCropper src={cropSrc} onCrop={setEditPhoto} onCancel={() => setCropSrc('')} />}
-    </PageContainer>
+    </div>
   );
 }
 

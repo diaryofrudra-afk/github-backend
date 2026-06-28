@@ -1,5 +1,7 @@
 from __future__ import annotations
 import os
+import uuid
+from datetime import datetime, timezone
 from typing import Optional
 import aiosqlite
 from .config import settings
@@ -28,8 +30,22 @@ async def init_db() -> None:
     # Migrations: add columns that may be missing on older databases
     migrations = [
         ("owner_profiles", "photo", "TEXT NOT NULL DEFAULT ''"),
+        ("owner_profiles", "address", "TEXT NOT NULL DEFAULT ''"),
+        ("owner_profiles", "pincode", "TEXT NOT NULL DEFAULT ''"),
+        ("owner_profiles", "pan", "TEXT NOT NULL DEFAULT ''"),
         ("cranes", "emi", "REAL NOT NULL DEFAULT 0.0"),
         ("cranes", "fixed_expenses", "REAL NOT NULL DEFAULT 0.0"),
+        # Invoice extras — older DBs were created from the base invoices schema
+        # and lack these columns the create/update routes write to.
+        ("invoices", "terms", "TEXT NOT NULL DEFAULT '[]'"),
+        ("invoices", "signature_url", "TEXT NOT NULL DEFAULT ''"),
+        ("invoices", "discount", "REAL NOT NULL DEFAULT 0"),
+        ("invoices", "additional_charges", "REAL NOT NULL DEFAULT 0"),
+        ("invoices", "total_in_words", "TEXT NOT NULL DEFAULT ''"),
+        ("invoices", "custom_fields", "TEXT NOT NULL DEFAULT '{}'"),
+        ("invoices", "advanced_options", "TEXT NOT NULL DEFAULT '{}'"),
+        ("invoices", "shipping", "TEXT NOT NULL DEFAULT '{}'"),
+        ("invoices", "currency", "TEXT NOT NULL DEFAULT 'INR'"),
     ]
     for table, col, col_type in migrations:
         cursor = await _db.execute(f"PRAGMA table_info({table})")
@@ -116,7 +132,57 @@ async def init_db() -> None:
             "ALTER TABLE wheelseye_credentials ADD COLUMN cookies_encrypted TEXT NOT NULL DEFAULT ''"
         )
 
+    # ── Vehicle document vault ─────────────────────────────────────────────────
+    # The table itself is created by schema.sql (run every startup). Two follow-ups:
+    #   1) drop the retired `diagnostics` table left over on older databases
+    #   2) one-time backfill of legacy compliance insurance/fitness dates as documents
+    await _db.execute("DROP TABLE IF EXISTS diagnostics")
+    await _backfill_compliance_documents(_db)
+
     await _db.commit()
+
+
+async def _backfill_compliance_documents(db: aiosqlite.Connection) -> None:
+    """Seed vehicle_documents from legacy compliance rows (idempotent).
+
+    For each compliance row, create an `insurance`/`fitness` document only if one
+    doesn't already exist for that crane_reg + tenant, so re-running is harmless.
+    """
+    cursor = await db.execute("PRAGMA table_info(compliance)")
+    if not await cursor.fetchall():
+        return  # no legacy compliance table on this database
+    cursor = await db.execute(
+        "SELECT crane_reg, insurance_date, insurance_notes, fitness_date, fitness_notes, "
+        "tenant_id FROM compliance"
+    )
+    rows = await cursor.fetchall()
+    now = datetime.now(timezone.utc).isoformat()
+    for row in rows:
+        for doc_type, date_col, notes_col in (
+            ("insurance", "insurance_date", "insurance_notes"),
+            ("fitness", "fitness_date", "fitness_notes"),
+        ):
+            expiry = row[date_col]
+            if not expiry:
+                continue
+            exists = await db.execute(
+                "SELECT 1 FROM vehicle_documents "
+                "WHERE tenant_id = ? AND crane_reg = ? AND doc_type = ? LIMIT 1",
+                (row["tenant_id"], row["crane_reg"], doc_type),
+            )
+            if await exists.fetchone():
+                continue
+            await db.execute(
+                """INSERT INTO vehicle_documents
+                   (id, crane_reg, doc_type, title, doc_number, issue_date, expiry_date,
+                    amount, file_id, notes, created_at, updated_at, tenant_id)
+                   VALUES (?, ?, ?, ?, '', NULL, ?, NULL, NULL, ?, ?, ?, ?)""",
+                (
+                    str(uuid.uuid4()), row["crane_reg"], doc_type,
+                    doc_type.capitalize(), expiry, row[notes_col] or "",
+                    now, now, row["tenant_id"],
+                ),
+            )
 
 
 async def close_db() -> None:

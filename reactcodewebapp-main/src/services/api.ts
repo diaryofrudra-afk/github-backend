@@ -14,6 +14,7 @@ import type {
   FuelEntry,
   TimesheetEntry,
   ComplianceRecord,
+  VehicleDocument,
   OwnerProfile,
   EngineStatusRecord,
   EngineStatusDuration,
@@ -155,6 +156,22 @@ function mapToSnakeCase(obj: any): any {
     out[snake] = v;
   }
   return out;
+}
+
+function mapVehicleDocument(row: any): VehicleDocument {
+  return {
+    id: row.id,
+    craneReg: row.crane_reg,
+    docType: row.doc_type,
+    title: row.title || '',
+    docNumber: row.doc_number || '',
+    issueDate: row.issue_date ?? null,
+    expiryDate: row.expiry_date ?? null,
+    amount: row.amount ?? null,
+    fileId: row.file_id ?? null,
+    notes: row.notes || '',
+    status: row.status,
+  };
 }
 
 // ── API object ───────────────────────────────────────────────────────────────
@@ -449,12 +466,26 @@ export const api = {
   },
 
 
-  // Diagnostics
-  getDiagnostics(): Promise<Record<string, unknown>> {
-    return request('GET', '/diagnostics');
+  // Vehicle documents (RC / Insurance / Fitness / Pollution / Permit / Road Tax / EMI / Other)
+  async getVehicleDocuments(craneReg?: string): Promise<VehicleDocument[]> {
+    const qs = craneReg ? `?crane_reg=${encodeURIComponent(craneReg)}` : '';
+    const rows: any[] = await request('GET', `/vehicle-documents${qs}`);
+    return rows.map(mapVehicleDocument);
   },
-  upsertDiagnostics(crane_reg: string, data: unknown): Promise<unknown> {
-    return request('PUT', `/diagnostics/${encodeURIComponent(crane_reg)}`, data);
+  async createVehicleDocument(data: Partial<VehicleDocument>): Promise<VehicleDocument> {
+    const row = await request('POST', '/vehicle-documents', mapToSnakeCase(data));
+    return mapVehicleDocument(row);
+  },
+  async updateVehicleDocument(id: string, data: Partial<VehicleDocument>): Promise<VehicleDocument> {
+    const row = await request('PUT', `/vehicle-documents/${encodeURIComponent(id)}`, mapToSnakeCase(data));
+    return mapVehicleDocument(row);
+  },
+  deleteVehicleDocument(id: string): Promise<void> {
+    return request('DELETE', `/vehicle-documents/${encodeURIComponent(id)}`);
+  },
+  async markEmiPaid(id: string): Promise<VehicleDocument> {
+    const row = await request('POST', `/vehicle-documents/${encodeURIComponent(id)}/emi-paid`);
+    return mapVehicleDocument(row);
   },
 
   // Owner profile

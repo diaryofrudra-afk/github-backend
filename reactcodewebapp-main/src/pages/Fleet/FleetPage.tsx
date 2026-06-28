@@ -2,21 +2,23 @@ import { useDeferredValue, useState, useMemo, useRef } from 'react';
 import {
   Search,
   Plus,
-  AlertTriangle,
-  Activity,
-  PauseCircle,
   Truck,
+  ChevronDown,
+  ChevronUp,
+  ArrowDownUp,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useMobileAppMode } from '../../hooks/useMobileAppMode';
 import { Modal } from '../../components/ui/Modal';
 import { ImageCropper } from '../../components/ui/ImageCropper';
 import { VehicleCard } from './VehicleCard';
 import { LiveTrackModal } from './LiveTrackModal';
 import { LogbookModal } from '../../components/LogbookModal';
 import { useUnifiedGPS, type UnifiedVehicle } from '../../hooks/useUnifiedGPS';
+import { DoughnutChart } from '../../components/charts/DoughnutChart';
 import { getExpiryStatus } from '../../utils';
 import { api } from '../../services/api';
-import type { Crane, Operator } from '../../types';
+import type { Crane, Operator, TimesheetEntry } from '../../types';
 
 
 function fileToBase64(file: File): Promise<string> {
@@ -52,11 +54,51 @@ function getComplianceAlerts(reg: string, compliance: Record<string, { insurance
   return alerts;
 }
 
+function getLatestLogbookEntry(crane: Crane, timesheets: Record<string, TimesheetEntry[]>): TimesheetEntry | undefined {
+  if (!crane.operator) return undefined;
+  const entries = timesheets[crane.operator] || [];
+  return entries
+    .filter(e => !e.crane_reg || e.crane_reg === crane.reg)
+    .slice()
+    .sort((a, b) => {
+      const aStamp = `${a.date || ''}T${a.endTime || a.end_time || a.startTime || a.start_time || ''}`;
+      const bStamp = `${b.date || ''}T${b.endTime || b.end_time || b.startTime || b.start_time || ''}`;
+      return bStamp.localeCompare(aStamp);
+    })[0];
+}
+
+function getLogbookEntryStamp(entry?: TimesheetEntry): string {
+  if (!entry) return '';
+  return `${entry.date || ''}T${entry.endTime || entry.end_time || entry.startTime || entry.start_time || ''}`;
+}
+
+function isVehicleEngineOn(vehicle?: UnifiedVehicle): boolean {
+  return !!vehicle && !!(vehicle.engine_on ?? (vehicle.ignition === 'on'));
+}
+
+// Composite 0–100 fleet health score: penalise compliance alerts and low utilization.
+function computeHealthScore(total: number, alerts: number, utilization: number): number {
+  if (total === 0) return 100;
+  const alertPenalty = Math.min(40, (alerts / total) * 100 * 0.6); // up to 40 pts
+  const utilPenalty = utilization < 50 ? (50 - utilization) * 0.4 : 0; // up to 20 pts
+  return Math.max(0, Math.round(100 - alertPenalty - utilPenalty));
+}
+
+// Read a CSS custom property off the document root (so chart colors follow the theme).
+function cssVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
 export function FleetPage({ active }: { active: boolean }) {
-  const { state, setState, save, showToast } = useApp();
+  const { state, setState, save, showToast, theme } = useApp();
+  const isMobileApp = useMobileAppMode();
+  const [fleetExpanded, setFleetExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<FleetFilter>('all');
+  const [sortAlpha, setSortAlpha] = useState(false);
 
   const [assignCraneId, setAssignCraneId] = useState<string | null>(null);
   const [selectedOp, setSelectedOp] = useState('');
@@ -110,6 +152,14 @@ export function FleetPage({ active }: { active: boolean }) {
     return alerts;
   }, [state.cranes, state.compliance]);
 
+  const gpsMatchesByReg = useMemo(() => {
+    const matches: Record<string, UnifiedVehicle> = {};
+    gpsVehicles.forEach(v => {
+      matches[normalizeRegistration(v.registration_number)] = v;
+    });
+    return matches;
+  }, [gpsVehicles]);
+
   const filtered = useMemo(() => {
     const q = deferredSearch.toLowerCase();
     return state.cranes.filter(c => {
@@ -121,27 +171,108 @@ export function FleetPage({ active }: { active: boolean }) {
         || profileName.toLowerCase().includes(q);
 
       const alerts = complianceAlertsByReg[c.reg] || [];
+      const engineOn = isVehicleEngineOn(gpsMatchesByReg[normalizeRegistration(c.reg)]);
       const mf =
         filter === 'all' ? true
-          : filter === 'assigned' ? !!c.operator
-            : filter === 'unassigned' ? !c.operator
+          : filter === 'assigned' ? engineOn        // Active Now → engine on
+            : filter === 'unassigned' ? !engineOn   // Standby → engine off
               : filter === 'alert' ? alerts.length > 0
                 : true;
       return ms && mf;
     });
-  }, [state.cranes, operatorNameByKey, complianceAlertsByReg, deferredSearch, filter]);
+  }, [state.cranes, operatorNameByKey, complianceAlertsByReg, gpsMatchesByReg, deferredSearch, filter]);
 
-  const gpsMatchesByReg = useMemo(() => {
-    const matches: Record<string, UnifiedVehicle> = {};
-    gpsVehicles.forEach(v => {
-      matches[normalizeRegistration(v.registration_number)] = v;
-    });
-    return matches;
-  }, [gpsVehicles]);
+  const orderedFleet = useMemo(() => {
+    return filtered
+      .map(crane => {
+        const gpsMatch = gpsMatchesByReg[normalizeRegistration(crane.reg)];
+        const latestLogbookEntry = getLatestLogbookEntry(crane, state.timesheets);
+        const priority = isVehicleEngineOn(gpsMatch) ? 0 : latestLogbookEntry ? 1 : 2;
+        return {
+          crane,
+          gpsMatch,
+          latestLogbookEntry,
+          priority,
+          logbookStamp: getLogbookEntryStamp(latestLogbookEntry),
+        };
+      })
+      .sort((a, b) => {
+        if (sortAlpha) return a.crane.reg.localeCompare(b.crane.reg);
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        if (a.priority === 1) return b.logbookStamp.localeCompare(a.logbookStamp);
+        return a.crane.reg.localeCompare(b.crane.reg);
+      });
+  }, [filtered, gpsMatchesByReg, state.timesheets, sortAlpha]);
 
-  const assignedCount = state.cranes.filter(c => !!c.operator).length;
+  const assignedCount = state.cranes.filter(
+    c => isVehicleEngineOn(gpsMatchesByReg[normalizeRegistration(c.reg)])
+  ).length;
   const standbyCount = state.cranes.length - assignedCount;
   const alertCount = Object.values(complianceAlertsByReg).filter(alerts => alerts.length > 0).length;
+
+  // Hours-based fleet utilization over the last 30 days: logged timesheet hours / available capacity.
+  const utilizationRate = useMemo(() => {
+    const windowDays = 30;
+    const cutoff = new Date(Date.now() - windowDays * 86400000).toISOString().slice(0, 10);
+    let totalHours = 0;
+    let capacity = 0;
+    state.cranes.forEach(c => {
+      const limit = Number(c.dailyLimit ?? c.daily_limit ?? 8) || 8;
+      capacity += limit * windowDays;
+      const ts = state.timesheets[c.operator || ''] || [];
+      ts.forEach(e => {
+        const matchesCrane = e.crane_reg ? e.crane_reg === c.reg : true;
+        if (matchesCrane && e.date >= cutoff) totalHours += Number(e.hoursDecimal) || 0;
+      });
+    });
+    if (capacity <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((totalHours / capacity) * 100)));
+  }, [state.cranes, state.timesheets]);
+
+  const healthScore = useMemo(
+    () => computeHealthScore(state.cranes.length, alertCount, utilizationRate),
+    [state.cranes.length, alertCount, utilizationRate]
+  );
+  const healthTier = healthScore >= 85 ? 'good' : healthScore >= 60 ? 'warn' : 'bad';
+
+  const kpis: Array<{ value: number; label: string; tone: string; dot: 'active' | 'standby' | 'alert' | null; key: FleetFilter }> = [
+    { value: state.cranes.length, label: 'Total Assets', tone: 'default', dot: null, key: 'all' },
+    { value: assignedCount, label: 'Active Now', tone: 'active', dot: 'active', key: 'assigned' },
+    { value: standbyCount, label: 'Standby', tone: 'default', dot: 'standby', key: 'unassigned' },
+    { value: alertCount, label: 'Alerts', tone: alertCount > 0 ? 'alert' : 'default', dot: alertCount > 0 ? 'alert' : 'standby', key: 'alert' },
+  ];
+
+  const renderKpi = (kpi: typeof kpis[number]) => (
+    <button
+      key={kpi.label}
+      onClick={() => setFilter(kpi.key)}
+      className={`fleet-kpi ${filter === kpi.key ? 'active' : ''}`}
+      aria-pressed={filter === kpi.key}
+    >
+      <div className="fleet-kpi-head">
+        {kpi.dot && <span className={`fleet-dot ${kpi.dot}`} />}
+        <span className="fleet-kpi-label">{kpi.label}</span>
+      </div>
+      <div className={`fleet-kpi-value ${kpi.tone}`}>{kpi.value}</div>
+    </button>
+  );
+
+  const donutData = useMemo(() => {
+    void theme; // recompute colors when the theme switches
+    return {
+      labels: ['Active', 'Standby', 'Alerts'],
+      datasets: [{
+        data: [assignedCount, standbyCount, alertCount],
+        backgroundColor: [
+          cssVar('--green', '#34c759'),
+          cssVar('--t3', '#8e8e93'),
+          cssVar('--red', '#ff3b30'),
+        ],
+        borderWidth: 0,
+        hoverOffset: 4,
+      }],
+    };
+  }, [assignedCount, standbyCount, alertCount, theme]);
 
   async function handleAddAsset() {
     const reg = assetForm.reg.trim().toUpperCase();
@@ -295,163 +426,216 @@ export function FleetPage({ active }: { active: boolean }) {
   }
 
 
+  const listTitle: Record<FleetFilter, string> = {
+    all: 'All Assets',
+    assigned: 'Active Now',
+    unassigned: 'On Standby',
+    alert: 'Needs Attention',
+  };
+  const listCount = orderedFleet.length === state.cranes.length
+    ? `${state.cranes.length} assets`
+    : `${orderedFleet.length} of ${state.cranes.length}`;
+
   return (
     <div className={`page fleet-page ${active ? 'active' : ''}`} id="page-fleet">
-      <div className="w-full">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-          <div className="border-b border-slate-200 bg-gradient-to-b from-orange-50/50 to-white px-5 py-5">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500 text-white shadow-lg shadow-orange-100">
-                    <Truck size={20} />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-extrabold tracking-tight text-slate-900">Fleet</h1>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Asset Management</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50/50 p-1">
-                  {[
-                    ['all', 'All', state.cranes.length],
-                    ['assigned', 'Active', assignedCount],
-                    ['unassigned', 'Standby', standbyCount],
-                    ['alert', 'Alerts', alertCount],
-                  ].map(([key, label, count]) => (
-                    <button
-                      key={key}
-                      onClick={() => setFilter(key as FleetFilter)}
-                      className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
-                        filter === key
-                          ? 'bg-white text-orange-600 shadow-sm border border-orange-100'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      {label} <span className={`ml-1 ${filter === key ? 'text-orange-400' : 'text-slate-400'}`}>{count}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="relative flex h-10 w-64 items-center rounded-xl border border-slate-200 bg-white px-3 transition-focus-within focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-50">
-                  <Search size={14} className="text-slate-400" />
-                  <input
-                    placeholder="Search registration, make..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="ml-2 w-full border-none bg-transparent text-xs font-medium outline-none placeholder:text-slate-400"
-                  />
-                </div>
-
-                <button
-                  onClick={() => setAssetModal(true)}
-                  className="flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-lg shadow-orange-100 transition hover:bg-orange-600 active:scale-95"
-                >
-                  <Plus size={16} />
-                  Add Asset
-                </button>
-              </div>
-            </div>
-
-            {/* OPERATIONAL SNAPSHOT */}
-            <div className="mt-5 bg-white rounded-xl border border-slate-200 flex overflow-x-auto shadow-sm">
-              <div className="p-4 px-6 border-r border-slate-100 flex flex-col justify-center gap-0.5 min-w-[162px] flex-shrink-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Activity size={14} className="text-orange-500" />
-                  <span className="text-[9.5px] font-extrabold text-orange-500 uppercase tracking-wide">
-                    Live Status
-                  </span>
-                </div>
-                <p className="text-sm font-extrabold text-slate-800 leading-tight">
-                  Operational
-                </p>
-                <p className="text-sm font-extrabold text-slate-800 leading-tight">
-                  Snapshot
-                </p>
-              </div>
-              
-              <div className="flex-1 p-4 px-6 border-r border-slate-100 flex items-center gap-3.5 min-w-[150px]">
-                <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 text-blue-600">
+      <div className="w-full fleet-cmd-wrap">
+        {/* ── COMMAND CENTER ── */}
+        {isMobileApp ? (
+          <div className={`fleet-cmd fleet-cmd-mobile ${fleetExpanded ? 'expanded' : 'collapsed'}`}>
+            {/* Hero row: title + expand toggle */}
+            <div className="fleet-cmd-hero">
+              <div className="fleet-cmd-titleblock">
+                <div className="fleet-cmd-icon">
                   <Truck size={20} />
                 </div>
                 <div>
-                  <p className="text-[30px] font-extrabold text-slate-800 tracking-tighter leading-none">
-                    {state.cranes.length}
-                  </p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-1.5">
-                    Total Assets
-                  </p>
+                  <h1 className="fleet-cmd-title">Fleet Overview</h1>
+                  <p className="fleet-cmd-sub">Real-time operational intelligence</p>
                 </div>
               </div>
+              <button
+                className="fleet-cmd-expand"
+                onClick={() => setFleetExpanded(v => !v)}
+                aria-expanded={fleetExpanded}
+                aria-label={fleetExpanded ? 'Collapse fleet summary' : 'Expand fleet summary'}
+              >
+                {fleetExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+            </div>
 
-              <div className="flex-1 p-4 px-6 border-r border-slate-100 flex items-center gap-3.5 min-w-[150px]">
-                <div className="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 text-green-600">
-                  <Activity size={20} />
+            {/* Search — always reachable without expanding */}
+            <div className="fleet-cmd-search">
+              <Search size={14} />
+              <input
+                placeholder="Search registration, make..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Always visible: Total Assets + Active Now */}
+            <div className="fleet-kpis fleet-kpis-primary">
+              {kpis.slice(0, 2).map(renderKpi)}
+            </div>
+
+            {fleetExpanded && (
+              <>
+                <div className="fleet-kpis fleet-kpis-secondary">
+                  {kpis.slice(2).map(renderKpi)}
                 </div>
-                <div>
-                  <p className="text-[30px] font-extrabold text-green-600 tracking-tighter leading-none">
-                    {assignedCount}
-                  </p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-1.5">
-                    Currently Active
-                  </p>
+
+                <div className="fleet-cmd-aside">
+                  <div className="fleet-donut">
+                    <DoughnutChart
+                      data={donutData}
+                      options={{ cutout: '72%', plugins: { legend: { display: false } } }}
+                    />
+                    <div className="fleet-donut-center">
+                      <span className="fleet-donut-num">{state.cranes.length}</span>
+                      <span className="fleet-donut-cap">Assets</span>
+                    </div>
+                  </div>
+                  <div className={`fleet-health ${healthTier}`}>
+                    <span className="fleet-health-score">
+                      {healthScore}
+                      <span className="fleet-health-max">/100</span>
+                    </span>
+                    <span className="fleet-health-label">Fleet Health</span>
+                  </div>
+                </div>
+
+                {/* Utilization bar */}
+                <div className="fleet-util">
+                  <div className="fleet-util-head">
+                    <span className="fleet-util-title">Fleet Utilization</span>
+                    <span className="fleet-util-pct">{utilizationRate}%</span>
+                  </div>
+                  <div className="fleet-util-track">
+                    <div className="fleet-util-fill" style={{ width: `${utilizationRate}%` }} />
+                  </div>
+                  <p className="fleet-util-note">Logged operating hours vs. available capacity · last 30 days</p>
+                </div>
+
+                {/* Add Asset */}
+                <button className="fleet-cmd-add" onClick={() => setAssetModal(true)}>
+                  <Plus size={16} />
+                  Add Asset
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+        <div className="fleet-cmd">
+          {/* Hero row */}
+          <div className="fleet-cmd-hero">
+            <div className="fleet-cmd-titleblock">
+              <div className="fleet-cmd-icon">
+                <Truck size={20} />
+              </div>
+              <div>
+                <h1 className="fleet-cmd-title">Fleet Overview</h1>
+                <p className="fleet-cmd-sub">Real-time operational intelligence</p>
+              </div>
+            </div>
+
+            <div className="fleet-cmd-actions">
+              <div className="fleet-cmd-search">
+                <Search size={14} />
+                <input
+                  placeholder="Search registration, make..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <button className="fleet-cmd-add" onClick={() => setAssetModal(true)}>
+                <Plus size={16} />
+                Add Asset
+              </button>
+            </div>
+          </div>
+
+          {/* KPI cluster (clickable filters) + distribution donut */}
+          <div className="fleet-cmd-body">
+            <div className="fleet-kpis">
+              {kpis.map(renderKpi)}
+            </div>
+
+            <div className="fleet-cmd-aside">
+              <div className="fleet-donut">
+                <DoughnutChart
+                  data={donutData}
+                  options={{ cutout: '72%', plugins: { legend: { display: false } } }}
+                />
+                <div className="fleet-donut-center">
+                  <span className="fleet-donut-num">{state.cranes.length}</span>
+                  <span className="fleet-donut-cap">Assets</span>
                 </div>
               </div>
-
-              <div className="flex-1 p-4 px-6 border-r border-slate-100 flex items-center gap-3.5 min-w-[150px]">
-                <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center flex-shrink-0 text-slate-500">
-                  <PauseCircle size={20} />
-                </div>
-                <div>
-                  <p className="text-[30px] font-extrabold text-slate-800 tracking-tighter leading-none">
-                    {standbyCount}
-                  </p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-1.5">
-                    On Standby
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex-1 p-4 px-6 flex items-center gap-3.5 min-w-[150px]">
-                <div className="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0 text-red-600">
-                  <AlertTriangle size={20} />
-                </div>
-                <div>
-                  <p className="text-[30px] font-extrabold text-slate-800 tracking-tighter leading-none">
-                    {alertCount}
-                  </p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-1.5">
-                    Compliance Alerts
-                  </p>
-                </div>
+              <div className={`fleet-health ${healthTier}`}>
+                <span className="fleet-health-score">
+                  {healthScore}
+                  <span className="fleet-health-max">/100</span>
+                </span>
+                <span className="fleet-health-label">Fleet Health</span>
               </div>
             </div>
           </div>
 
-          <div className="p-5 bg-slate-50/30">
+          {/* Utilization bar */}
+          <div className="fleet-util">
+            <div className="fleet-util-head">
+              <span className="fleet-util-title">Fleet Utilization</span>
+              <span className="fleet-util-pct">{utilizationRate}%</span>
+            </div>
+            <div className="fleet-util-track">
+              <div className="fleet-util-fill" style={{ width: `${utilizationRate}%` }} />
+            </div>
+            <p className="fleet-util-note">Logged operating hours vs. available capacity · last 30 days</p>
+          </div>
+        </div>
+        )}
+
+        {/* ── LIST HEADER ── */}
+        <div className="fleet-list-header">
+          <div className="fleet-list-headline">
+            <span className="fleet-list-title">{listTitle[filter]}</span>
+            <span className="fleet-list-count">{listCount}</span>
+          </div>
+          <button
+            className={`fleet-sort-btn${sortAlpha ? ' active' : ''}`}
+            onClick={() => setSortAlpha((v) => !v)}
+            aria-pressed={sortAlpha}
+            title={sortAlpha ? 'Sorted A–Z · tap for default' : 'Sort A–Z'}
+          >
+            <ArrowDownUp size={14} />
+            Sort
+          </button>
+        </div>
+
+        {/* ── ASSET GRID ── */}
+        <div className="fleet-grid-wrap">
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-              {filtered.length === 0 ? (
-                <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50">
-                    <Truck size={20} className="text-slate-400" />
+              {orderedFleet.length === 0 ? (
+                <div className="fleet-empty col-span-full">
+                  <div className="fleet-empty-icon">
+                    <Truck size={20} />
                   </div>
-                  <h3 className="text-sm font-bold text-slate-800">No assets found</h3>
-                  <p className="mt-1 text-xs text-slate-500">Try adjusting your search or filters</p>
+                  <h3 className="fleet-empty-title">No assets found</h3>
+                  <p className="fleet-empty-sub">Try adjusting your search or filters</p>
                 </div>
               ) : (
-                filtered.map((crane: Crane) => {
+                orderedFleet.map(({ crane, gpsMatch, latestLogbookEntry }) => {
                   const profileName = operatorNameByKey[crane.operator || ''];
                   const alerts = complianceAlertsByReg[crane.reg] || [];
-                  const gpsMatch = gpsMatchesByReg[normalizeRegistration(crane.reg)];
                   return (
                     <VehicleCard
                       key={crane.id}
                       crane={crane}
+                      compact={isMobileApp}
                       operatorName={profileName}
                       alerts={alerts}
                       gpsMatch={gpsMatch}
+                      latestLogbookEntry={latestLogbookEntry}
                       onAssign={handleAssign}
                       onDelete={handleDelete}
                       onEdit={handleEdit}
@@ -466,7 +650,6 @@ export function FleetPage({ active }: { active: boolean }) {
                 })
               )}
             </div>
-          </div>
         </div>
       </div>
 

@@ -39,6 +39,28 @@ def _encode_json(value, default):
     return value
 
 
+# JSON-text columns that must be decoded back to arrays/objects on read so the
+# response matches the frontend's expected shape (e.g. `items` as a list, not a
+# JSON string). Without this, reopening a saved invoice for editing sees `items`
+# as a string and silently drops every line item.
+_JSON_COLUMNS = ("items", "terms", "custom_fields", "advanced_options", "shipping")
+
+
+def _decode_row(row):
+    """Turn a DB row into a dict with its JSON-text columns parsed."""
+    if row is None:
+        return None
+    data = dict(row)
+    for col in _JSON_COLUMNS:
+        val = data.get(col)
+        if isinstance(val, str):
+            try:
+                data[col] = json.loads(val)
+            except (ValueError, TypeError):
+                pass  # leave malformed text as-is rather than crash
+    return data
+
+
 # ── Invoices ─────────────────────────────────────────────────────────────────
 
 @router.get("/invoices")
@@ -47,7 +69,7 @@ async def get_invoices(user=Depends(get_current_user), db=Depends(get_db)):
         "SELECT * FROM invoices WHERE tenant_id = ?", (user["tenant_id"],)
     )
     rows = await cursor.fetchall()
-    return [dict(row) for row in rows]
+    return [_decode_row(row) for row in rows]
 
 
 @router.post("/invoices")
@@ -82,7 +104,7 @@ async def create_invoice(body: InvoiceCreate, user=Depends(get_current_user), db
         "SELECT * FROM invoices WHERE id = ? AND tenant_id = ?", (invoice_id, user["tenant_id"])
     )
     row = await cursor.fetchone()
-    return dict(row)
+    return _decode_row(row)
 
 
 @router.put("/invoices/{invoice_id}")
@@ -111,7 +133,7 @@ async def update_invoice(
         if jk in fields:
             fields[jk] = _encode_json(fields[jk], default)
     if not fields:
-        return dict(existing)
+        return _decode_row(existing)
 
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     values = list(fields.values()) + [invoice_id, user["tenant_id"]]
@@ -123,7 +145,7 @@ async def update_invoice(
         "SELECT * FROM invoices WHERE id = ? AND tenant_id = ?", (invoice_id, user["tenant_id"])
     )
     row = await cursor.fetchone()
-    return dict(row)
+    return _decode_row(row)
 
 
 @router.delete("/invoices/{invoice_id}")

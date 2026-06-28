@@ -34,7 +34,7 @@ interface AppContextValue {
 
 const defaultOwnerProfile: OwnerProfile = {
   name: '', roleTitle: '', phone: '', email: '',
-  company: '', address: '', city: '', state: '', pincode: '', gst: '', website: '', defaultLimit: '8',
+  company: '', address: '', city: '', state: '', pincode: '', gst: '', pan: '', website: '', defaultLimit: '8',
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -43,7 +43,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 const DATA_KEYS: (keyof AppState)[] = [
   'cranes', 'operators', 'operatorProfiles', 'ownerProfile',
   'fuelLogs', 'cameras', 'integrations', 'advancePayments',
-  'diagnostics', 'clients', 'invoices', 'payments', 'creditNotes',
+  'vehicleDocuments', 'clients', 'invoices', 'payments', 'creditNotes',
   'quotations', 'proformas', 'challans', 'files', 'timesheets',
   'compliance', 'attendance', 'maintenance', 'notifications', 'opNotifications',
 ];
@@ -66,7 +66,7 @@ function emptyState(): AppState {
     cameras: [],
     integrations: { fuel: {}, cameras: {} },
     advancePayments: {},
-    diagnostics: {},
+    vehicleDocuments: [],
     clients: [],
     invoices: [],
     payments: [],
@@ -117,7 +117,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const keys: (keyof AppState)[] = [
       'operators', 'operatorProfiles', 'cranes', 'files', 'timesheets',
       'compliance', 'attendance', 'maintenance', 'notifications', 'opNotifications',
-      'fuelLogs', 'cameras', 'advancePayments', 'diagnostics', 'clients',
+      'fuelLogs', 'cameras', 'advancePayments', 'vehicleDocuments', 'clients',
       'invoices', 'payments', 'creditNotes', 'quotations', 'proformas',
       'challans', 'ownerProfile',
     ];

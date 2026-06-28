@@ -58,12 +58,63 @@ async def create_timesheet(body: TimesheetCreate, user=Depends(get_current_user)
         ),
     )
 
+    # Notify the fleet owner that a logbook entry was submitted. Best-effort:
+    # a notification failure must never block the timesheet write.
+    try:
+        await _notify_owner_of_logbook(
+            db,
+            tenant_id=user["tenant_id"],
+            operator_key=body.operator_key,
+            crane_reg=body.crane_reg,
+            hours=body.hours_decimal,
+        )
+    except Exception:
+        pass
+
     await db.commit()
     cursor = await db.execute(
         "SELECT * FROM timesheets WHERE id = ? AND tenant_id = ?", (sheet_id, user["tenant_id"])
     )
     row = await cursor.fetchone()
     return dict(row)
+
+
+def _fmt_hours(hours) -> str:
+    try:
+        h = float(hours)
+    except (TypeError, ValueError):
+        return "0"
+    return str(int(h)) if h == int(h) else f"{h:.1f}"
+
+
+async def _notify_owner_of_logbook(db, *, tenant_id, operator_key, crane_reg, hours):
+    """Create an owner-facing notification for a submitted logbook entry.
+
+    Keyed on the tenant owner's user id (same key the GPS/engine notifications
+    use), so it shows up in the owner's notification feed. Shares the caller's
+    transaction (commit=False) — the create_timesheet commit persists it."""
+    cursor = await db.execute(
+        "SELECT id FROM users WHERE tenant_id = ? AND role = 'owner' LIMIT 1",
+        (tenant_id,),
+    )
+    owner = await cursor.fetchone()
+    if not owner:
+        return
+    owner_id = owner["id"]
+
+    name = operator_key or "Operator"
+    cursor = await db.execute(
+        "SELECT name FROM operators WHERE (phone = ? OR id = ?) AND tenant_id = ? LIMIT 1",
+        (operator_key, operator_key, tenant_id),
+    )
+    op_row = await cursor.fetchone()
+    if op_row and op_row["name"]:
+        name = op_row["name"]
+
+    message = f"📋 {name} logged {_fmt_hours(hours)} hrs on {crane_reg}"
+
+    from ..notifications.service import create_notification as _create_notification
+    await _create_notification(db, tenant_id, owner_id, message, type="info", commit=False)
 
 
 @router.put("/{sheet_id}")

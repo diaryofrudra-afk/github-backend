@@ -118,8 +118,8 @@ export function MobileDrawer({ open, onClose, onSignOut }: MobileDrawerProps) {
             className={`nav-item drawer-nav-item${activePage === 'diagnostics' ? ' active' : ''}`}
             onClick={() => nav('diagnostics')}
           >
-            <img src={diagnosticsIcon} alt="Diagnostics" style={{ width: 20, height: 20 }} />
-            <Pretext text="Diagnostics" font="500 12px Inter" balanced />
+            <img src={diagnosticsIcon} alt="Documents" style={{ width: 20, height: 20 }} />
+            <Pretext text="Documents" font="500 12px Inter" balanced />
           </div>
 
           <div className="nav-section-label"><Pretext text="Manage" font="700 10px Inter" balanced /></div>

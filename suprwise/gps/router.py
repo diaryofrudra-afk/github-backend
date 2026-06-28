@@ -391,6 +391,17 @@ async def sync_all_gps_to_fleet(
         if not reg:
             return
 
+        # Coerce every text column to "" — these columns are NOT NULL DEFAULT '', and a
+        # provider may hand us None (e.g. WheelsEye returns driver_name: null), which would
+        # otherwise raise "NOT NULL constraint failed" and silently drop the vehicle.
+        status = status or ""
+        notes = notes or ""
+        type_str = type_str or ""
+        make_str = make_str or ""
+        model_str = model_str or ""
+        site_str = site_str or ""
+        operator_str = operator_str or ""
+
         cursor = await db.execute(
             "SELECT id, reg FROM cranes WHERE (reg = ? OR replace(reg, ' ', '') = ?) AND tenant_id = ?",
             (reg, reg, user["tenant_id"]),
@@ -399,9 +410,12 @@ async def sync_all_gps_to_fleet(
 
         try:
             if existing:
+                # Only update GPS-derived fields. Do NOT touch operator/site here —
+                # those are owner-managed assignments and overwriting them with the
+                # empty defaults would wipe an operator's vehicle assignment on every sync.
                 await db.execute(
-                    "UPDATE cranes SET status = ?, notes = ?, reg = ?, site = ?, operator = ? WHERE id = ?",
-                    (status, notes, reg, site_str, operator_str, existing[0]),
+                    "UPDATE cranes SET status = ?, notes = ?, reg = ? WHERE id = ?",
+                    (status, notes, reg, existing[0]),
                 )
                 updated += 1
             else:

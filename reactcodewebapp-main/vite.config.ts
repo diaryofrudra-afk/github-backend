@@ -7,7 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        // Must match the port uvicorn is started on. Override via env if it changes —
+        // do NOT add a second config file (see "Local dev invariants" in CLAUDE.md).
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8002',
         changeOrigin: true,
         ws: true,
       },

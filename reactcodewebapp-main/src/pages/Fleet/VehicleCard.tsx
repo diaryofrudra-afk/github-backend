@@ -1,13 +1,15 @@
 
 import type { UnifiedVehicle } from '../../hooks/useUnifiedGPS';
-import type { Crane } from '../../types';
-import { Edit2, Trash2, MapPin, User, Info, Clock } from 'lucide-react';
+import type { Crane, TimesheetEntry } from '../../types';
+import { Edit2, Trash2, MapPin, User, Info, Clock, Phone, Repeat, UserPlus } from 'lucide-react';
 
 interface VehicleCardProps {
   crane: Crane;
+  compact?: boolean;
   operatorName?: string;
   alerts: string[];
   gpsMatch?: UnifiedVehicle;
+  latestLogbookEntry?: TimesheetEntry;
   onAssign: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
@@ -17,9 +19,11 @@ interface VehicleCardProps {
 
 export function VehicleCard({
   crane,
+  compact = false,
   operatorName,
   alerts,
   gpsMatch,
+  latestLogbookEntry,
   onAssign,
   onDelete,
   onEdit,
@@ -33,29 +37,17 @@ export function VehicleCard({
   
   const engineOn = gpsMatch ? (gpsMatch.engine_on ?? (gpsMatch.ignition === 'on')) : null;
   const isAlert = alerts.length > 0 || gpsMatch?.status === 'wire_disconnected';
-  
-  // Fuel computation (live value if available, else deterministic mock based on ID)
-  const getFuel = () => {
-    if (gpsMatch?.fuel_percentage !== undefined && gpsMatch?.fuel_percentage !== null) {
-      return Math.round(Number(gpsMatch.fuel_percentage));
-    }
-    if (gpsMatch?.j1939_fuel_level !== undefined && gpsMatch?.j1939_fuel_level !== null) {
-      return Math.round(Number(gpsMatch.j1939_fuel_level));
-    }
-    // Deterministic fallback based on ID hash
-    let hash = 0;
-    const str = crane.id || crane.reg || "";
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return Math.abs(hash % 80) + 15; // 15% to 95%
+
+  const logbookHours = Number(latestLogbookEntry?.hoursDecimal ?? latestLogbookEntry?.hours_decimal ?? 0);
+  const dailyLimit = Number(crane.dailyLimit ?? crane.daily_limit ?? 8) || 8;
+  const baseHours = Math.min(Math.max(logbookHours, 0), dailyLimit);
+  const otHours = Math.max(0, logbookHours - dailyLimit);
+  const basePct = logbookHours > 0 ? (baseHours / logbookHours) * 100 : 0;
+  const otPct = logbookHours > 0 ? (otHours / logbookHours) * 100 : 0;
+  const formatHours = (hours: number) => {
+    if (!Number.isFinite(hours) || hours <= 0) return '0 hrs';
+    return `${Number.isInteger(hours) ? hours.toFixed(0) : hours.toFixed(1)} hrs`;
   };
-  const fuel = getFuel();
-  
-  // Fuel style colors
-  const fc = fuel <= 15 ? 'c' : fuel <= 35 ? 'l' : fuel <= 65 ? 'm' : 'g';
-  const fuelBarColor = fc === 'c' ? '#EF4444' : fc === 'l' ? '#F59E0B' : fc === 'm' ? '#3B82F6' : '#22C55E';
-  const fuelTextColor = fc === 'c' ? '#DC2626' : fc === 'l' ? '#D97706' : fc === 'm' ? '#2563EB' : '#16A34A';
 
   // Location and last seen with deterministic fallback
   const location = gpsMatch?.address || crane.site || (() => {
@@ -81,24 +73,37 @@ export function VehicleCard({
   const initials = operatorName
     ? operatorName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : 'OP';
+  const operatorPhone = op ? String(op).replace(/[^\d+]/g, '') : '';
 
   // Formatting label specifications
-  const normalizedMake = crane.make && crane.make.toLowerCase().includes('wheelseye') ? 'Trak N Tell' : crane.make;
+  const normalizedMake = crane.make && crane.make.toLowerCase().includes('wheelseye') ? 'WheelsEye' : crane.make;
   const specsLine = [crane.year, normalizedMake, crane.capacity ? `${crane.capacity}T` : ''].filter(Boolean).join(' · ');
-  const displayMake = (crane.make || '').toLowerCase().includes('wheelseye') ? 'Trak N Tell' : (crane.make || 'Blackbuck GPS');
-  const trackerTypeLabel = (gpsMatch?.provider ? (gpsMatch.provider === 'blackbuck' ? 'Blackbuck GPS' : 'Trak N Tell') : displayMake) + ' · ' + typeLabel;
+  const displayMake = (crane.make || '').toLowerCase().includes('wheelseye') ? 'WheelsEye' : (crane.make || 'Blackbuck GPS');
+  const providerLabel = gpsMatch?.provider
+    ? (gpsMatch.provider === 'blackbuck' ? 'Blackbuck GPS' : gpsMatch.provider === 'wheelseye' ? 'WheelsEye' : 'Trak N Tell')
+    : displayMake;
+  const trackerTypeLabel = providerLabel + ' · ' + typeLabel;
 
   // Visual borders / accent bars
-  const cardBorderColorClass = isAlert ? 'border-red-200' : engineOn ? 'border-green-200' : 'border-slate-200';
-  const topAccentColor = isAlert ? '#EF4444' : engineOn ? '#22C55E' : '#E2E8F0';
-  const imgAreaBg = isCrane ? '#FFF7ED' : '#EEF2FF';
+  const cardBorderColor = isAlert ? 'var(--red)' : engineOn ? 'var(--green)' : 'var(--border)';
+  const topAccentColor = isAlert ? 'var(--red)' : engineOn ? 'var(--green)' : 'var(--border2)';
+  const imgAreaBg = isCrane
+    ? 'color-mix(in srgb, var(--accent) 14%, var(--bg4))'
+    : 'color-mix(in srgb, #4F46E5 14%, var(--bg4))';
+  const typeBadgeBg = isCrane
+    ? 'color-mix(in srgb, var(--accent) 13%, var(--bg4))'
+    : 'color-mix(in srgb, #4F46E5 13%, var(--bg4))';
+  const typeBadgeColor = isCrane ? 'var(--accent)' : '#818CF8';
 
   return (
-    <article className={`bg-white rounded-xl border ${cardBorderColorClass} overflow-hidden flex flex-col transition-all duration-200 hover:shadow-[0_6px_22px_rgba(15,23,42,0.09)] hover:-translate-y-0.5 group`}>
+    <article
+      className="bg-[var(--bg3)] rounded-xl border overflow-hidden flex flex-col transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] hover:-translate-y-0.5 group"
+      style={{ borderColor: cardBorderColor }}
+    >
       <div className="flex">
         {/* Left: vector illustration box */}
-        <div 
-          className="w-40 flex-shrink-0 relative flex items-center justify-center overflow-hidden min-h-[160px]"
+        <div
+          className="w-[114px] flex-shrink-0 relative flex items-center justify-center overflow-hidden min-h-[150px]"
           style={{ background: imgAreaBg }}
         >
           {/* Accent top stripe */}
@@ -106,54 +111,52 @@ export function VehicleCard({
 
           {/* Inline Vector Crane SVG */}
           {isCrane ? (
-            <svg fill="none" height="94" viewBox="0 0 116 94" width="116">
-              <rect fill="#E2E8F0" height="2" rx="1" width="116" x="0" y="84" />
-              <rect fill="#CBD5E1" height="34" rx="3" width="40" x="10" y="53" />
-              <rect fill="#94A3B8" height="22" rx="3" width="25" x="15" y="40" />
-              <rect fill="#BAE6FD" height="8" opacity="0.85" rx="1.5" width="8" x="18" y="43" />
-              <rect fill="#BAE6FD" height="8" opacity="0.85" rx="1.5" width="8" x="28" y="43" />
+            <svg fill="none" height="86" viewBox="0 0 116 94" width="106">
+              <rect fill="#3a4452" height="34" rx="3" width="40" x="10" y="53" />
+              <rect fill="#4a5566" height="22" rx="3" width="25" x="15" y="40" />
+              <rect fill="#7fc8f0" height="8" opacity="0.85" rx="1.5" width="8" x="18" y="43" />
+              <rect fill="#7fc8f0" height="8" opacity="0.85" rx="1.5" width="8" x="28" y="43" />
               <line stroke="#F97316" strokeLinecap="round" strokeWidth="5.5" x1="27" x2="108" y1="40" y2="5" />
-              <line opacity="0.55" stroke="#FED7AA" strokeLinecap="round" strokeWidth="2.5" x1="30" x2="111" y1="45" y2="10" />
+              <line opacity="0.5" stroke="#FED7AA" strokeLinecap="round" strokeWidth="2.5" x1="30" x2="111" y1="45" y2="10" />
               <line stroke="#FB923C" strokeLinecap="round" strokeWidth="4.5" x1="27" x2="4" y1="40" y2="51" />
               <rect fill="#EA580C" height="16" rx="2.5" width="12" x="0" y="45" />
-              <line stroke="#94A3B8" strokeDasharray="4,3" strokeWidth="1.5" x1="93" x2="93" y1="12" y2="66" />
-              <path d="M89 66 Q93 73 97 66" fill="none" stroke="#64748B" strokeLinecap="round" strokeWidth="2.5" />
-              <circle cx="19" cy="86" fill="#334155" r="7" />
-              <circle cx="19" cy="86" fill="#64748B" r="3.5" />
-              <circle cx="36" cy="86" fill="#334155" r="7" />
-              <circle cx="36" cy="86" fill="#64748B" r="3.5" />
-              <circle cx="50" cy="86" fill="#334155" r="7" />
-              <circle cx="50" cy="86" fill="#64748B" r="3.5" />
+              <line stroke="#5a6675" strokeDasharray="4,3" strokeWidth="1.5" x1="93" x2="93" y1="12" y2="66" />
+              <path d="M89 66 Q93 73 97 66" fill="none" stroke="#5a6675" strokeLinecap="round" strokeWidth="2.5" />
+              <circle cx="19" cy="86" fill="#222b36" r="7" />
+              <circle cx="19" cy="86" fill="#4a5566" r="3.5" />
+              <circle cx="36" cy="86" fill="#222b36" r="7" />
+              <circle cx="36" cy="86" fill="#4a5566" r="3.5" />
+              <circle cx="50" cy="86" fill="#222b36" r="7" />
+              <circle cx="50" cy="86" fill="#4a5566" r="3.5" />
             </svg>
           ) : (
             // Inline Vector Truck/Machinery SVG
-            <svg fill="none" height="80" viewBox="0 0 126 80" width="116">
-              <rect fill="#E2E8F0" height="2" rx="1" width="126" x="0" y="70" />
-              <rect fill="#E2E8F0" height="48" rx="3" width="74" x="2" y="20" />
-              <line stroke="#CBD5E1" strokeWidth="1.5" x1="27" x2="27" y1="20" y2="68" />
-              <line stroke="#CBD5E1" strokeWidth="1.5" x1="52" x2="52" y1="20" y2="68" />
-              <rect fill="#CBD5E1" height="57" rx="5" width="55" x="68" y="11" />
-              <rect fill="#93C5FD" height="28" opacity="0.75" rx="3" width="40" x="74" y="15" />
-              <rect fill="#94A3B8" height="22" rx="2.5" width="10" x="116" y="37" />
-              <rect fill="#FEF08A" height="7" rx="1.5" width="6" x="118" y="17" />
-              <rect fill="#FCA5A5" height="5" rx="1" width="6" x="118" y="26" />
-              <rect fill="#94A3B8" height="16" rx="2" width="5" x="76" y="3" />
-              <circle cx="18" cy="72" fill="#1E293B" r="9" />
-              <circle cx="18" cy="72" fill="#475569" r="4.5" />
-              <circle cx="53" cy="72" fill="#1E293B" r="9" />
-              <circle cx="53" cy="72" fill="#475569" r="4.5" />
-              <circle cx="86" cy="72" fill="#1E293B" r="9" />
-              <circle cx="86" cy="72" fill="#475569" r="4.5" />
-              <circle cx="107" cy="72" fill="#1E293B" r="9" />
-              <circle cx="107" cy="72" fill="#475569" r="4.5" />
+            <svg fill="none" height="72" viewBox="0 0 126 80" width="106">
+              <rect fill="#3a4452" height="48" rx="3" width="74" x="2" y="20" />
+              <line stroke="#4a5566" strokeWidth="1.5" x1="27" x2="27" y1="20" y2="68" />
+              <line stroke="#4a5566" strokeWidth="1.5" x1="52" x2="52" y1="20" y2="68" />
+              <rect fill="#4a5566" height="57" rx="5" width="55" x="68" y="11" />
+              <rect fill="#5b8fd6" height="28" opacity="0.7" rx="3" width="40" x="74" y="15" />
+              <rect fill="#3a4452" height="22" rx="2.5" width="10" x="116" y="37" />
+              <rect fill="#d9c84a" height="7" rx="1.5" width="6" x="118" y="17" />
+              <rect fill="#c96a6a" height="5" rx="1" width="6" x="118" y="26" />
+              <rect fill="#4a5566" height="16" rx="2" width="5" x="76" y="3" />
+              <circle cx="18" cy="72" fill="#1b2430" r="9" />
+              <circle cx="18" cy="72" fill="#3a4658" r="4.5" />
+              <circle cx="53" cy="72" fill="#1b2430" r="9" />
+              <circle cx="53" cy="72" fill="#3a4658" r="4.5" />
+              <circle cx="86" cy="72" fill="#1b2430" r="9" />
+              <circle cx="86" cy="72" fill="#3a4658" r="4.5" />
+              <circle cx="107" cy="72" fill="#1b2430" r="9" />
+              <circle cx="107" cy="72" fill="#3a4658" r="4.5" />
             </svg>
           )}
 
           {/* Engine Status Badge Overlay */}
-          <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 bg-white rounded-full py-0.5 px-2 shadow-[0_1px_6px_rgba(15,23,42,0.12)]">
-            <div className={`w-1.5 h-1.5 rounded-full ${engineOn ? 'bg-green-600 animate-pulse' : 'bg-slate-300'}`} />
-            <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
-              {engineOn ? 'Engine Active' : 'Engine Off'}
+          <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 bg-[var(--bg3)] border border-[var(--border)] rounded-full py-0.5 px-2 shadow-[var(--card-shadow)] backdrop-blur-sm">
+            <div className={`w-1.5 h-1.5 rounded-full ${engineOn ? 'bg-[var(--green)] animate-pulse' : 'bg-[var(--t3)]'}`} />
+            <span className="text-[10px] font-bold text-[var(--t2)] whitespace-nowrap">
+              {engineOn ? 'Engine On' : 'Engine Off'}
             </span>
           </div>
         </div>
@@ -162,11 +165,11 @@ export function VehicleCard({
         <div className="flex-1 p-3.5 flex flex-col gap-2 min-w-0">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ color: isCrane ? '#EA580C' : '#4F46E5', backgroundColor: isCrane ? '#FFF7ED' : '#EEF2FF' }}>
+              <span className="text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ color: typeBadgeColor, backgroundColor: typeBadgeBg }}>
                 {typeLabel}
               </span>
               {isAlert && (
-                <span className="flex items-center gap-0.5 text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full text-red-600 bg-red-50 border border-red-100">
+                <span className="flex items-center gap-0.5 text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full text-[var(--red)] bg-[var(--red-s)] border border-[var(--red)]/30">
                   <Info size={10} /> Alert
                 </span>
               )}
@@ -175,14 +178,14 @@ export function VehicleCard({
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <button 
                 onClick={() => onEdit(crane.id)} 
-                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                className="p-1 text-[var(--t3)] hover:text-[var(--t1)] hover:bg-[var(--bg5)] rounded-lg transition"
                 title="Edit Asset"
               >
                 <Edit2 size={13} />
               </button>
               <button 
                 onClick={() => onDelete(crane.id)} 
-                className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                className="p-1 text-[var(--t3)] hover:text-[var(--red)] hover:bg-[var(--red-s)] rounded-lg transition"
                 title="Delete Asset"
               >
                 <Trash2 size={13} />
@@ -191,53 +194,74 @@ export function VehicleCard({
           </div>
 
           <div>
-            <h3 className="text-[17px] font-extrabold text-slate-900 leading-snug truncate" title={crane.reg}>
+            <h3 className="text-[17px] font-extrabold text-[var(--t1)] leading-snug truncate" title={crane.reg}>
               {crane.reg}
             </h3>
             {specsLine && (
-              <p className="text-[12px] font-semibold text-slate-500 mt-0.5 truncate">
+              <p className="text-[12px] font-semibold text-[var(--t2)] mt-0.5 truncate">
                 {specsLine}
               </p>
             )}
-            <p className="text-[11px] text-slate-400 truncate">
+            <p className="text-[11px] text-[var(--t3)] truncate">
               {trackerTypeLabel}
             </p>
           </div>
 
-          {/* Fuel status bar indicator */}
+          {/* Latest operator logbook hours */}
           <div>
             <div className="flex justify-between items-center mb-1">
               <div className="flex items-center gap-1">
-                <svg fill="none" height="12" viewBox="0 0 13 15" width="11" stroke={fuelTextColor} strokeWidth="1.3">
-                  <rect height="13" rx="1.5" width="8" x="1" y="1" />
-                  <path d="M9 4.5l2.5 1.5v5a1 1 0 0 1-1 1H9" strokeWidth="1.2" />
-                  <rect fill={fuelBarColor} height="4" opacity="0.45" rx="0.5" width="5" x="2.5" y="3" />
-                </svg>
-                <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wide">
-                  Fuel
+                <Clock size={11} className="text-[var(--accent)]" />
+                <span className="text-[9.5px] font-bold text-[var(--t3)] uppercase tracking-wide">
+                  Logbook
                 </span>
               </div>
-              <span className="text-[12.5px] font-black" style={{ color: fuelTextColor }}>
-                {fuel}%
+              <span className="text-[12.5px] font-black text-[var(--accent)]">
+                {latestLogbookEntry ? formatHours(logbookHours) : 'No entry'}
               </span>
             </div>
-            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${fuel}%`, backgroundColor: fuelBarColor }}
-              />
+            <div className="h-1.5 bg-[var(--bg5)] rounded-full overflow-hidden flex">
+              {latestLogbookEntry ? (
+                <>
+                  <div
+                    className="h-full transition-all duration-300"
+                    style={{ width: `${basePct}%`, backgroundColor: 'var(--accent)' }}
+                    title={`Base time: ${formatHours(baseHours)}`}
+                  />
+                  {otHours > 0 && (
+                    <div
+                      className="h-full transition-all duration-300"
+                      style={{ width: `${otPct}%`, backgroundColor: '#3B82F6' }}
+                      title={`OT: ${formatHours(otHours)}`}
+                    />
+                  )}
+                </>
+              ) : (
+                <div className="h-full w-full bg-[var(--bg5)]" />
+              )}
             </div>
+            <div className="mt-1 flex items-center justify-between gap-2 text-[10.5px] font-bold text-[var(--t2)]">
+              <span className="truncate">{latestLogbookEntry?.startTime || latestLogbookEntry?.start_time || '--:--'}</span>
+              <span className="text-[var(--accent)]">{latestLogbookEntry ? formatHours(logbookHours) : 'Awaiting upload'}</span>
+              <span className="truncate text-right">{latestLogbookEntry?.endTime || latestLogbookEntry?.end_time || '--:--'}</span>
+            </div>
+            {otHours > 0 && (
+              <div className="mt-1 flex items-center gap-2 text-[9.5px] font-bold uppercase tracking-wide text-[var(--t3)]">
+                <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" /> Base {formatHours(baseHours)}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> OT {formatHours(otHours)}</span>
+              </div>
+            )}
           </div>
 
           {/* Location + Last updated info */}
-          <div className="flex items-center gap-1 text-slate-500 min-w-0">
-            <MapPin size={11} className="text-slate-400 flex-shrink-0" />
-            <span className="text-[11.5px] font-semibold text-slate-600 truncate max-w-[120px]">
+          <div className="flex items-center gap-1 text-[var(--t2)] min-w-0">
+            <MapPin size={11} className="text-[var(--t3)] flex-shrink-0" />
+            <span className="text-[11.5px] font-semibold text-[var(--t2)] truncate max-w-[120px]">
               {location}
             </span>
-            <span className="text-slate-300 text-[10px] flex-shrink-0">•</span>
-            <Clock size={11} className="text-slate-400 flex-shrink-0" />
-            <span className="text-[11px] text-slate-400 truncate whitespace-nowrap">
+            <span className="text-[var(--t4)] text-[10px] flex-shrink-0">•</span>
+            <Clock size={11} className="text-[var(--t3)] flex-shrink-0" />
+            <span className="text-[11px] text-[var(--t3)] truncate whitespace-nowrap">
               {lastSeen}
             </span>
           </div>
@@ -245,67 +269,105 @@ export function VehicleCard({
       </div>
 
       {/* Footer bar */}
-      <div className="border-t border-slate-100 py-2 px-3.5 flex items-center justify-between bg-slate-50/50">
+      <div className={`border-t border-[var(--border)] py-2 px-3.5 flex items-center bg-[var(--bg4)] ${compact ? 'gap-2' : 'justify-between'}`}>
         {/* Operator status */}
-        <div className="flex items-center">
+        <div className={`flex items-center ${compact ? 'flex-1 min-w-0' : ''}`}>
           {op ? (
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-[10.5px] font-black text-white flex-shrink-0 shadow-sm shadow-orange-200">
+            <div className={`flex items-center gap-2 ${compact ? 'min-w-0' : ''}`}>
+              <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center text-[10.5px] font-black text-white flex-shrink-0 shadow-sm shadow-[var(--accent-g)]">
                 {initials}
               </div>
-              <div>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-none mb-0.5">
+              <div className={compact ? 'min-w-0' : ''}>
+                <p className="text-[9px] font-bold text-[var(--t3)] uppercase tracking-wide leading-none mb-0.5">
                   Operator
                 </p>
-                <p className="text-[12.5px] font-black text-slate-800 leading-none">
-                  {operatorName || op}
-                </p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className={`text-[12.5px] font-black text-[var(--t1)] leading-none ${compact ? 'truncate' : ''}`}>
+                    {operatorName || op}
+                  </p>
+                  {operatorPhone && (
+                    <a
+                      href={`tel:${operatorPhone}`}
+                      className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--green-s)] text-[var(--green)] hover:bg-[var(--green-g)] transition"
+                      title={`Call ${operatorName || op}`}
+                      aria-label={`Call ${operatorName || op}`}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Phone size={11} />
+                    </a>
+                  )}
+                </div>
               </div>
-              <button 
-                onClick={() => onAssign(crane.id)}
-                className="text-[11px] font-bold text-slate-500 hover:text-slate-800 bg-white border border-slate-200 hover:border-slate-300 px-2 py-1 rounded-md transition duration-150 ml-1.5 shadow-sm"
-              >
-                Change
-              </button>
+              {!compact && (
+                <button
+                  onClick={() => onAssign(crane.id)}
+                  className="text-[11px] font-bold text-[var(--t2)] hover:text-[var(--t1)] bg-[var(--bg4)] border border-[var(--border)] hover:border-[var(--border3)] px-2.5 py-1 rounded-lg transition duration-150 ml-1.5 shadow-sm"
+                >
+                  Change
+                </button>
+              )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
-                <User size={13} className="text-slate-400" />
+            <div className={`flex items-center gap-2 ${compact ? 'min-w-0' : ''}`}>
+              <div className="w-7 h-7 rounded-full bg-[var(--bg5)] border border-dashed border-[var(--border2)] flex items-center justify-center flex-shrink-0">
+                <User size={13} className="text-[var(--t3)]" />
               </div>
               <div>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-none mb-0.5">
+                <p className="text-[9px] font-bold text-[var(--t3)] uppercase tracking-wide leading-none mb-0.5">
                   Operator
                 </p>
-                <p className="text-[12px] font-semibold text-slate-400 leading-none">
+                <p className="text-[12px] font-semibold text-[var(--t3)] leading-none">
                   Unassigned
                 </p>
               </div>
-              <button 
-                onClick={() => onAssign(crane.id)}
-                className="text-[11px] font-extrabold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100/70 border border-orange-100 hover:border-orange-200 px-2 py-1 rounded-md transition duration-150 ml-1.5 shadow-sm"
-              >
-                Assign
-              </button>
+              {!compact && (
+                <button
+                  onClick={() => onAssign(crane.id)}
+                  className="text-[11px] font-extrabold text-[var(--accent)] hover:text-[var(--t1)] bg-[var(--accent-s)] hover:bg-[var(--accent-g)] border border-transparent px-2.5 py-1 rounded-lg transition duration-150 ml-1.5 shadow-sm"
+                >
+                  Assign
+                </button>
+              )}
             </div>
           )}
         </div>
 
         {/* Action triggers */}
-        <div className="flex gap-1.5">
-          <button 
-            onClick={() => onViewLogbook(crane.reg, crane.operator || '')} 
-            className="inline-flex items-center gap-1 px-3 h-8 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-bold text-[12px] transition duration-150 active:scale-95 shadow-sm"
+        <div className={`flex items-center gap-1.5 flex-shrink-0 ${compact ? '' : 'ml-auto'}`}>
+          {compact && (
+            op ? (
+              <button
+                onClick={() => onAssign(crane.id)}
+                title="Change operator"
+                aria-label="Change operator"
+                className="inline-flex items-center justify-center w-8 h-8 bg-[var(--bg4)] border border-[var(--border)] rounded-xl text-[var(--t2)] hover:text-[var(--t1)] hover:border-[var(--border3)] transition duration-150 active:scale-95 shadow-sm"
+              >
+                <Repeat size={14} />
+              </button>
+            ) : (
+              <button
+                onClick={() => onAssign(crane.id)}
+                title="Assign operator"
+                aria-label="Assign operator"
+                className="inline-flex items-center justify-center w-8 h-8 bg-[var(--accent-s)] border border-transparent rounded-xl text-[var(--accent)] hover:bg-[var(--accent-g)] transition duration-150 active:scale-95 shadow-sm"
+              >
+                <UserPlus size={14} />
+              </button>
+            )
+          )}
+          <button
+            onClick={() => onViewLogbook(crane.reg, crane.operator || '')}
+            className={`inline-flex items-center gap-1 h-8 bg-[var(--bg4)] border border-[var(--border)] rounded-xl text-[var(--t2)] hover:bg-[var(--bg5)] hover:border-[var(--border3)] font-bold transition duration-150 active:scale-95 shadow-sm ${compact ? 'px-2.5 text-[11px]' : 'px-3 text-[12px]'}`}
           >
-            <Clock size={12} className="text-slate-400" />
+            <Clock size={12} className="text-[var(--t3)]" />
             Logbook
           </button>
-          <button 
+          <button
             onClick={() => onLiveTrack(crane, gpsMatch)}
-            className="inline-flex items-center gap-1 px-3 h-8 bg-slate-900 border border-slate-900 hover:bg-slate-800 hover:border-slate-800 rounded-lg text-white font-bold text-[12px] transition duration-150 active:scale-95 shadow-sm"
+            className={`inline-flex items-center gap-1 h-8 bg-[var(--t1)] border border-transparent hover:opacity-90 rounded-xl text-[var(--bg)] font-bold transition duration-150 active:scale-95 shadow-sm ${compact ? 'px-2.5 text-[11px]' : 'px-3 text-[12px]'}`}
           >
-            <MapPin size={12} className="text-slate-300" />
-            Live Track
+            <MapPin size={12} />
+            Track
           </button>
         </div>
       </div>

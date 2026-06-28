@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { fmtINR, fmtHours, calcBill } from '../../utils';
 import type { Crane, TimesheetEntry } from '../../types';
-import { PageContainer } from '../../components/ui/PageContainer';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { StatCard } from '../../components/ui/StatCard';
 import { IndianRupee, TrendingUp, Calendar, Truck } from 'lucide-react';
@@ -63,14 +62,13 @@ export function EarningsPage({ active }: { active: boolean }) {
   }, [state.cranes, state.timesheets, state.operatorProfiles, period]);
 
   return (
-    <PageContainer id="page-earnings" active={active} className="earnings-page">
-      <div className="p-5 border-b border-[var(--border)] bg-gradient-to-b from-[var(--accent-s)] to-[var(--bg4)]">
-        <PageHeader 
-          title="Earnings" 
-          subtitle="Revenue per asset from timesheets"
-          icon={<TrendingUp size={20} />}
-          iconBgClass="bg-green-500 shadow-green-100"
-        >
+    <div className={`page earnings-page ${active ? 'active' : ''}`} id="page-earnings">
+      <PageHeader 
+        title="Earnings" 
+        subtitle="Revenue per asset from timesheets"
+        icon={<TrendingUp size={20} />}
+        iconBgClass="bg-green-500"
+      >
           <div className="relative flex items-center bg-[var(--bg4)] border border-[var(--border)] rounded-xl px-3 py-1 shadow-sm">
             <Calendar size={14} className="text-[var(--t4)] mr-2" />
             <select
@@ -95,8 +93,8 @@ export function EarningsPage({ active }: { active: boolean }) {
             icon={<IndianRupee size={18} />}
             label="Fleet Revenue"
             value={fmtINR(data.fleetRev)}
-            colorClass="text-green-600"
-            bgClass="bg-green-50"
+            colorClass="text-green-600 dark:text-green-400"
+            bgClass="bg-green-500/10 dark:bg-green-500/20"
           />
           <StatCard
             icon={<Truck size={18} />}
@@ -106,9 +104,8 @@ export function EarningsPage({ active }: { active: boolean }) {
             bgClass="bg-[var(--bg5)]"
           />
         </div>
-      </div>
 
-      <div className="p-5 flex-1 bg-[var(--bg3)] overflow-y-auto">
+      <div className="mt-8">
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {state.cranes.length === 0 ? (
             <div className="col-span-full rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg4)] px-6 py-12 text-center">
@@ -156,6 +153,6 @@ export function EarningsPage({ active }: { active: boolean }) {
           )}
         </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

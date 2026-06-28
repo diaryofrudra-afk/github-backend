@@ -487,6 +487,31 @@
   .bl-kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
+  .bl-header {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 18px;
+    gap: 12px;
+  }
+  .bl-header-left h2 {
+    font-size: 21px;
+  }
+  .bl-header-left p {
+    font-size: 12px;
+  }
+  .bl-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+  .bl-header-actions .btn-sm {
+    width: 100%;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 12px !important;
+    font-size: 12px;
+  }
   .bl-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .bl-kpi-card { padding: 14px; gap: 12px; }
   .bl-kpi-value { font-size: 16px; }
@@ -496,6 +521,12 @@
   .bl-gst-summary { grid-template-columns: 1fr; }
   .bl-mobile-hide { display: none !important; }
   .bl-tab-btn { padding: 6px 12px; font-size: 12px; }
+  .bl-card {
+    border-radius: 18px;
+  }
+  .mobile-owner-shell .billing-page {
+    padding-bottom: 8px;
+  }
 }
 
 .bl-download-btn-hover:hover {
@@ -504,3 +535,176 @@
   transform: scale(1.08);
 }
 
+/* ============================================================
+   Billing document tabs — redesigned filter bar (search +
+   compact toggles + date-range calendar). Rendered by the
+   shared DocumentFilters, so every tab uses these styles.
+   Popovers are portaled to <body> (see Popover.tsx) with
+   inline position:fixed, so they float above .bl-card and are
+   never clipped by its overflow:hidden.
+   ============================================================ */
+.bl-inv-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--bl-divider);
+  flex-wrap: nowrap;
+}
+
+/* Search dominates the row. */
+.bl-inv-search {
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+/* ---- Compact status / client toggle ---- */
+.bl-compact-dd {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--bl-text-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s;
+}
+.bl-compact-dd svg { color: var(--bl-text-mute); flex-shrink: 0; }
+.bl-compact-dd:hover { border-color: var(--border2); color: var(--bl-text); }
+.bl-compact-dd.active {
+  background: var(--accent-s);
+  border-color: var(--accent-g);
+  color: var(--accent);
+}
+.bl-compact-dd.active svg { color: var(--accent); }
+
+.bl-compact-menu {
+  /* position:fixed + top/right come from Popover (portaled to body) */
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 5px;
+  min-width: 170px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.bl-compact-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bl-text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.13s;
+}
+.bl-compact-item:hover { background: var(--bg3); }
+.bl-compact-item.sel { color: var(--accent); font-weight: 600; }
+
+/* ---- Date-range calendar trigger + popover ---- */
+.bl-daterange-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--bl-text-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s;
+}
+.bl-daterange-btn svg { color: var(--bl-text-mute); flex-shrink: 0; }
+.bl-daterange-btn:hover { border-color: var(--border2); color: var(--bl-text); }
+.bl-daterange-btn.active {
+  background: var(--accent-s);
+  border-color: var(--accent-g);
+  color: var(--accent);
+}
+.bl-daterange-btn.active svg { color: var(--accent); }
+
+.bl-daterange-pop {
+  /* position:fixed + top/right come from Popover (portaled to body) */
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+.bl-daterange-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bl-divider);
+}
+.bl-daterange-done {
+  padding: 8px 18px;
+  background: var(--accent-s);
+  border: 1px solid var(--accent-g);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.16s;
+}
+.bl-daterange-done:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---- react-day-picker theming (booking-style range) ---- */
+.bl-daterange-pop .rdp-root {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accent-s);
+  --rdp-day-width: 38px;
+  --rdp-day-height: 38px;
+  --rdp-day_button-width: 36px;
+  --rdp-day_button-height: 36px;
+  --rdp-day_button-border-radius: 9px;
+  --rdp-selected-border: 0;
+  --rdp-today-color: var(--accent);
+  --rdp-range_middle-background-color: var(--accent-s);
+  --rdp-range_middle-color: var(--bl-text);
+  --rdp-range_start-color: #fff;
+  --rdp-range_end-color: #fff;
+  --rdp-range_start-date-background-color: var(--accent);
+  --rdp-range_end-date-background-color: var(--accent);
+  --rdp-range_start-background: var(--accent-s);
+  --rdp-range_end-background: var(--accent-s);
+  color: var(--bl-text);
+  font-size: 13px;
+  margin: 0;
+}
+.bl-daterange-pop .rdp-caption_label,
+.bl-daterange-pop .rdp-month_caption { color: var(--bl-text); font-weight: 600; }
+.bl-daterange-pop .rdp-weekday { color: var(--bl-text-mute); font-weight: 500; }
+.bl-daterange-pop .rdp-day_button:hover { background: var(--bg4); }
+.bl-daterange-pop .rdp-range_start .rdp-day_button:hover,
+.bl-daterange-pop .rdp-range_end .rdp-day_button:hover { background: var(--accent); }
+.bl-daterange-pop .rdp-chevron { fill: var(--bl-text-soft); }
+.bl-daterange-pop .rdp-button_previous:hover .rdp-chevron,
+.bl-daterange-pop .rdp-button_next:hover .rdp-chevron { fill: var(--accent); }
+.bl-daterange-pop .rdp-outside { color: var(--bl-text-mute); }
+
+@media (max-width: 640px) {
+  .bl-inv-filters { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+  .bl-inv-search { flex-basis: 100%; min-width: 0; }
+  .bl-daterange-pop { max-width: calc(100vw - 16px); }
+}

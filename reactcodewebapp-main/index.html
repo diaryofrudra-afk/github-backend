@@ -4,7 +4,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
   <title>Suprwise</title>
+  <script>
+    // Set theme-color before paint so the mobile browser chrome (status/address
+    // bar) matches the app background — avoids the white bar at the top.
+    (function () {
+      var t = localStorage.getItem('rudra_theme') || 'dark';
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f8f9ff' : '#000000');
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link

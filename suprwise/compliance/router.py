@@ -45,12 +45,10 @@ async def upsert_compliance(
         await db.execute(
             """UPDATE compliance
                SET insurance_date = ?, insurance_notes = ?,
-                   rto_date = ?, rto_notes = ?,
                    fitness_date = ?, fitness_notes = ?
                WHERE crane_reg = ? AND tenant_id = ?""",
             (
                 body.insurance_date, body.insurance_notes,
-                body.rto_date, body.rto_notes,
                 body.fitness_date, body.fitness_notes,
                 crane_reg, user["tenant_id"],
             ),
@@ -60,12 +58,11 @@ async def upsert_compliance(
         await db.execute(
             """INSERT INTO compliance
                (id, crane_reg, insurance_date, insurance_notes,
-                rto_date, rto_notes, fitness_date, fitness_notes, tenant_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                fitness_date, fitness_notes, tenant_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 record_id, crane_reg,
                 body.insurance_date, body.insurance_notes,
-                body.rto_date, body.rto_notes,
                 body.fitness_date, body.fitness_notes,
                 user["tenant_id"],
             ),

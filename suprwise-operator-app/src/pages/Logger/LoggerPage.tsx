@@ -205,7 +205,14 @@ export function LoggerPage({ active }: { active: boolean }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const assigned = cranes.find(c => c.operator === user);
+  // An owner may store the assignment as the operator's phone, record id, or even
+  // the user's phone. Match against all of them so the assignment shows regardless.
+  const assigned = cranes.find(c => {
+    const key = c.operator;
+    if (!key) return false;
+    return key === user
+      || (currentOp && (key === String(currentOp.id) || key === currentOp.phone));
+  });
   const myTs: TimesheetEntry[] = user ? (timesheets[user] || []) : [];
   const myFiles: unknown[] = user ? (files[user] || []) : [];
 

@@ -309,7 +309,9 @@ export function DocumentEditor({ kind, mode, documentId, defaultNumber, onCancel
   };
 
   const persist = async (status?: 'draft' | 'sent') => {
-    if (!clientId) { showToast('Select a client', 'error'); return; }
+    if (status === 'sent' && !clientId) {
+      showToast('Select a client before finalizing', 'error'); return;
+    }
     if (rows.every(r => !r.description.trim() && !r.qty && !r.rate)) {
       showToast('Add at least one line item', 'error'); return;
     }

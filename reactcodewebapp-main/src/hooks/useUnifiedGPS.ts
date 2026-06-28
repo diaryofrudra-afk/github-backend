@@ -102,6 +102,7 @@ export function useUnifiedGPS(opts?: { pollInterval?: number }) {
   const [error, setError] = useState<string | null>(null);
   const [blackbuckCount, setBlackbuckCount] = useState(0);
   const [trakntellCount, setTrakntellCount] = useState(0);
+  const [wheelseyeCount, setWheelseyeCount] = useState(0);
   const hasLoadedOnceRef = useRef(false);
 
   const fetchVehicles = useCallback(async () => {
@@ -164,7 +165,7 @@ export function useUnifiedGPS(opts?: { pollInterval?: number }) {
         }
       }
 
-      // Process WheelsEye vehicles (Map to Trak N Tell)
+      // Process WheelsEye vehicles
       if (wheelseyeResp.status === 'fulfilled' && wheelseyeResp.value.ok) {
         const wheelseyeData = await wheelseyeResp.value.json();
         console.log('[GPS] WheelsEye response:', {
@@ -175,7 +176,7 @@ export function useUnifiedGPS(opts?: { pollInterval?: number }) {
         if (wheelseyeData.vehicles && !wheelseyeData.error) {
           const weVehicles = wheelseyeData.vehicles.map((v: WheelsEyeVehicle) => ({
             ...v,
-            provider: 'trakntell' as const, // Render as Trak N Tell
+            provider: 'wheelseye' as const,
           }));
           unifiedVehicles.push(...weVehicles);
           weCount = weVehicles.length;
@@ -186,7 +187,8 @@ export function useUnifiedGPS(opts?: { pollInterval?: number }) {
 
       setVehicles(unifiedVehicles);
       setBlackbuckCount(bbCount);
-      setTrakntellCount(tntCount + weCount); // Combine counts under Trak N Tell
+      setTrakntellCount(tntCount);
+      setWheelseyeCount(weCount);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to fetch GPS data');
@@ -218,6 +220,7 @@ export function useUnifiedGPS(opts?: { pollInterval?: number }) {
     refetch: fetchVehicles,
     blackbuckCount,
     trakntellCount,
-    totalVehicles: blackbuckCount + trakntellCount,
+    wheelseyeCount,
+    totalVehicles: blackbuckCount + trakntellCount + wheelseyeCount,
   };
 }

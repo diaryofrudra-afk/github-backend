@@ -19,6 +19,15 @@ class InvoiceCreate(BaseModel):
     status: str = "draft"
     paid_amount: float = 0
     notes: str = ""
+    terms: Optional[List[Any]] = None
+    signature_url: str = ""
+    discount: float = 0
+    additional_charges: float = 0
+    total_in_words: str = ""
+    custom_fields: Optional[Any] = None
+    advanced_options: Optional[Any] = None
+    shipping: Optional[Any] = None
+    currency: str = "INR"
 
 
 class InvoiceUpdate(BaseModel):
@@ -35,6 +44,15 @@ class InvoiceUpdate(BaseModel):
     status: Optional[str] = None
     paid_amount: Optional[float] = None
     notes: Optional[str] = None
+    terms: Optional[List[Any]] = None
+    signature_url: Optional[str] = None
+    discount: Optional[float] = None
+    additional_charges: Optional[float] = None
+    total_in_words: Optional[str] = None
+    custom_fields: Optional[Any] = None
+    advanced_options: Optional[Any] = None
+    shipping: Optional[Any] = None
+    currency: Optional[str] = None
 
 
 # ── Payments ─────────────────────────────────────────────────────────────────

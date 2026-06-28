@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { fmtINR, fmtHours, calcBill } from '../../utils';
+import { useMobileAppMode } from '../../hooks/useMobileAppMode';
+import { fmtINR, fmtHours, calcBill, toISO } from '../../utils';
 import { LineChart } from '../../components/charts/LineChart';
 import { LogbookViewer } from '../../components/ui/LogbookViewer';
 import { 
@@ -17,19 +18,34 @@ import {
   CheckCircle2,
   XCircle,
   Eye,
-  ChevronRight,
-  ChevronDown,
   ArrowRight
 } from 'lucide-react';
 
+// Last 12 months as { value: 'YYYY-MM', label: 'Month YYYY' } options for the salary tracker.
+function getMonthOptions(): Array<{ value: string; label: string }> {
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    opts.push({ value, label });
+  }
+  return opts;
+}
+
 export function AnalyticsPage({ active }: { active: boolean }) {
   const { state } = useApp();
-  
+  const isMobileApp = useMobileAppMode();
+
   // States
   const [period, setPeriod] = useState<string>('30'); // '7' | '30' | '90' | '180' | 'all'
-  const [selectedCraneReg, setSelectedCraneReg] = useState<string | null>(null);
   const [viewerFileUrl, setViewerFileUrl] = useState<string | null>(null);
   const [viewerFileName, setViewerFileName] = useState<string>('');
+
+  // Pending salary tracker is month-scoped, independent of the period pills above.
+  const monthOptions = useMemo(() => getMonthOptions(), []);
+  const [salaryMonth, setSalaryMonth] = useState(monthOptions[0].value);
 
   // 1. Dynamic Date Range Calculation
   const startDateISO = useMemo(() => {
@@ -182,8 +198,10 @@ export function AnalyticsPage({ active }: { active: boolean }) {
       }
     });
 
-    // Operator Payables
+    // Operator Payables + salary-paid coverage
     let operatorPayables = 0;
+    let totalOperatorSalary = 0; // sum of every operator's base monthly salary
+    let totalOperatorPaid = 0;   // sum of all salary/advance payments made (this period)
     state.operators.forEach(op => {
       const opKey = op.phone || op.id;
       const opStat = assetStats.find(as => as.crane.operator === opKey);
@@ -191,7 +209,16 @@ export function AnalyticsPage({ active }: { active: boolean }) {
       const advances = ((state.advancePayments[opKey] || []) as any[]).filter((e: any) => !startDateISO || e.date >= startDateISO);
       const totalAdvances = advances.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
       operatorPayables += Math.max(earned - totalAdvances, 0);
+
+      const opProfile = (state.operatorProfiles[opKey] || {}) as any;
+      totalOperatorSalary += Number(opProfile.salary) || 0;
+      totalOperatorPaid += totalAdvances;
     });
+    // % of total operator salary that has been paid out, and the remainder still owed.
+    const salaryPaidPct = totalOperatorSalary > 0
+      ? Math.min(100, Math.round((totalOperatorPaid / totalOperatorSalary) * 100))
+      : 0;
+    const salaryOwedPct = 100 - salaryPaidPct;
 
     // Compliance alerts check
     let complianceRiskCount = 0;
@@ -227,6 +254,10 @@ export function AnalyticsPage({ active }: { active: boolean }) {
       utilizationRate,
       clientReceivables,
       operatorPayables,
+      totalOperatorSalary,
+      totalOperatorPaid,
+      salaryPaidPct,
+      salaryOwedPct,
       complianceRiskCount,
       activeCraneDays,
       totalPotentialCraneDays
@@ -289,11 +320,65 @@ export function AnalyticsPage({ active }: { active: boolean }) {
     };
   }, [analytics.assetStats, numDays, state]);
 
-  // Selected asset detail variables
-  const selectedAssetDetail = useMemo(() => {
-    if (!selectedCraneReg) return null;
-    return analytics.assetStats.find(as => as.reg === selectedCraneReg) || null;
-  }, [selectedCraneReg, analytics.assetStats]);
+  // Per-operator pending salary for the selected month — attendance present-days basis,
+  // mirroring the Attendance page so the numbers match there. Present = a timesheet day
+  // with hours > 0, or a manual attendance row 'present' (manual overrides).
+  const salaryTracker = useMemo(() => {
+    const [yr, mo] = salaryMonth.split('-').map(Number);
+    const daysInMonth = new Date(yr, mo, 0).getDate();
+
+    const rows = (state.operators || []).map(operator => {
+      const phone = operator.phone || '';
+      const operatorKeys = [phone, String(operator.id)].filter(Boolean);
+      const opKey = phone || String(operator.id);
+      const profile = (state.operatorProfiles[phone] || state.operatorProfiles[String(operator.id)] || {}) as Record<string, unknown>;
+      const salary = Number(profile.salary) || 0;
+      const workDays = Number(profile.workingDays) || 26;
+
+      const dayHoursMap: Record<string, number> = {};
+      operatorKeys.forEach(key => {
+        (state.timesheets[key] || []).forEach(e => {
+          const iso = toISO(e?.date || '');
+          if (iso) dayHoursMap[iso] = (dayHoursMap[iso] || 0) + (Number(e?.hoursDecimal) || 0);
+        });
+      });
+
+      const att: Record<string, boolean> = {};
+      for (const [iso, hrs] of Object.entries(dayHoursMap)) {
+        if (hrs > 0) att[iso] = true;
+      }
+      (state.attendance || []).filter(a => operatorKeys.includes(a?.operator_key)).forEach(a => {
+        if (a?.status === 'present') att[a.date] = true;
+        else if (a?.status === 'absent') att[a.date] = false;
+      });
+
+      let presentCount = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const iso = `${yr}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (att[iso]) presentCount++;
+      }
+
+      const perDay = workDays > 0 ? salary / workDays : 0;
+      const earnedGross = Math.round(perDay * presentCount);
+
+      const opAdvances = (state.advancePayments[opKey] || []) as Array<{ date?: string; amount?: number }>;
+      const totalAdvances = (Array.isArray(opAdvances) ? opAdvances : [])
+        .filter(a => a?.date?.startsWith(salaryMonth))
+        .reduce((s, a) => s + (Number(a?.amount) || 0), 0);
+
+      const pendingBalance = earnedGross - totalAdvances;
+      return { id: opKey, name: operator.name || '—', presentCount, earnedGross, totalAdvances, pendingBalance };
+    });
+
+    rows.sort((a, b) => b.pendingBalance - a.pendingBalance);
+
+    return {
+      rows,
+      totalPending: rows.reduce((s, r) => s + r.pendingBalance, 0),
+      totalEarned: rows.reduce((s, r) => s + r.earnedGross, 0),
+      totalAdvances: rows.reduce((s, r) => s + r.totalAdvances, 0),
+    };
+  }, [state.operators, state.timesheets, state.attendance, state.operatorProfiles, state.advancePayments, salaryMonth]);
 
   const openLogbookScan = (operatorKey: string, date: string) => {
     const userFiles = (state.files[operatorKey] || []) as any[];
@@ -307,16 +392,16 @@ export function AnalyticsPage({ active }: { active: boolean }) {
   if (!active) return null;
 
   return (
-    <div className="page active" id="page-analytics" style={{ background: 'var(--bg)', color: 'var(--t1)', padding: '24px 20px 100px' }}>
+    <div className="page active analytics-page" id="page-analytics" style={{ background: 'var(--bg)', color: 'var(--t1)', padding: isMobileApp ? '16px 14px 100px' : '24px 20px 100px' }}>
       {/* ── Dashboard Header ── */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <header style={{ display: 'flex', alignItems: isMobileApp ? 'stretch' : 'center', flexDirection: isMobileApp ? 'column' : 'row', justifyContent: 'space-between', marginBottom: 28, gap: isMobileApp ? '14px' : undefined }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--fh)', color: 'var(--t1)', letterSpacing: '-0.5px' }}>Fleet Analytics</h2>
           <p style={{ fontSize: '13px', color: 'var(--t2)', marginTop: '4px' }}>Real-time earnings, pro-rata overhead costs & operational efficiency</p>
         </div>
         
         {/* Preset filter pills */}
-        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg3)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', width: isMobileApp ? '100%' : undefined, gap: '8px', background: 'var(--bg3)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
           {[
             { value: '7', label: '7D' },
             { value: '30', label: '30D' },
@@ -346,7 +431,7 @@ export function AnalyticsPage({ active }: { active: boolean }) {
       </header>
 
       {/* ── Section 1: KPI Stats Summary Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobileApp ? '1fr' : 'repeat(auto-fill, minmax(240px, 1fr))', gap: isMobileApp ? '14px' : '20px', marginBottom: 28 }}>
         {/* Net Profit */}
         <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: '20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: analytics.netProfit >= 0 ? 'var(--green-s)' : 'var(--red-s)', color: analytics.netProfit >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -402,10 +487,24 @@ export function AnalyticsPage({ active }: { active: boolean }) {
             </div>
           </div>
         </div>
+
+        {/* Operator Salary Owed */}
+        <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: '20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(255, 170, 0, 0.12)', color: '#ffaa00', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Wallet size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Operator Salary Owed</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--t1)', marginTop: '2px' }}>{analytics.salaryOwedPct}%</div>
+            <div style={{ fontSize: '11px', color: 'var(--t2)', marginTop: '2px' }}>
+              {fmtINR(analytics.totalOperatorPaid)} paid / {fmtINR(analytics.totalOperatorSalary)}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Section 2: Fleet Performance Pane (Dynamic Charts & Expenses Breakdown) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobileApp ? '1fr' : 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: 28 }}>
         {/* Profitability Trend */}
         <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: '24px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -454,26 +553,178 @@ export function AnalyticsPage({ active }: { active: boolean }) {
         </div>
       </div>
 
-      {/* ── Section 3: Individual Asset Earning & Expense Tracker (Profitability Leaderboard) ── */}
-      <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: '24px', border: '1px solid var(--border)', marginBottom: 28 }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--t1)', marginBottom: '18px' }}>Individual Asset Earning &amp; Expense Tracker</h3>
+      {/* ── Section 2.5: Operator Pending Salary Tracker (month-scoped) ── */}
+      <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: isMobileApp ? '18px 16px' : '24px', border: '1px solid var(--border)', marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: isMobileApp ? 'stretch' : 'center', flexDirection: isMobileApp ? 'column' : 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--t1)' }}>Operator Pending Salary</h3>
+            <p style={{ fontSize: '11px', color: 'var(--t2)', marginTop: '2px' }}>Earned from attendance minus advances paid · per operator for the selected month</p>
+          </div>
+          <select
+            value={salaryMonth}
+            onChange={e => setSalaryMonth(e.target.value)}
+            style={{ width: isMobileApp ? '100%' : undefined, fontSize: 13, padding: '10px 16px', border: '1px solid var(--border)', background: 'var(--bg4)', color: 'var(--t1)', borderRadius: 12, outline: 'none', cursor: 'pointer', fontWeight: 600 }}
+          >
+            {monthOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Total pending stat */}
+        <div style={{ display: 'flex', alignItems: isMobileApp ? 'flex-start' : 'center', flexDirection: isMobileApp ? 'column' : 'row', gap: '16px', background: 'var(--bg4)', borderRadius: '14px', padding: '18px 20px', border: '1px solid var(--border)', marginBottom: '20px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: salaryTracker.totalPending >= 0 ? 'var(--red-s)' : 'var(--green-s)', color: salaryTracker.totalPending >= 0 ? 'var(--red)' : 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Wallet size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Pending Salary · All Operators</div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: salaryTracker.totalPending >= 0 ? 'var(--t1)' : 'var(--green)', marginTop: '2px' }}>{fmtINR(salaryTracker.totalPending)}</div>
+            <div style={{ fontSize: '11px', color: 'var(--t2)', marginTop: '2px' }}>Earned {fmtINR(salaryTracker.totalEarned)} · Advances paid {fmtINR(salaryTracker.totalAdvances)}</div>
+          </div>
+        </div>
+
+        {/* Per-operator table */}
+        {isMobileApp ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {salaryTracker.rows.length === 0 ? (
+              <div style={{ padding: '12px', textAlign: 'center', color: 'var(--t3)', fontSize: '13px' }}>No operators yet.</div>
+            ) : (
+              salaryTracker.rows.map(r => (
+                <div key={r.id} style={{ background: 'var(--bg4)', border: '1px solid var(--border)', borderRadius: '14px', padding: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--t1)', fontWeight: 800, fontSize: '14px', marginBottom: '12px' }}>
+                    <Users size={14} style={{ color: 'var(--t3)' }} />
+                    {r.name}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    {[
+                      { label: 'Present Days', value: `${r.presentCount} days`, color: 'var(--t2)' },
+                      { label: 'Earned', value: fmtINR(r.earnedGross), color: 'var(--t1)' },
+                      { label: 'Advances', value: fmtINR(r.totalAdvances), color: 'var(--t2)' },
+                      { label: 'Pending', value: fmtINR(r.pendingBalance), color: r.pendingBalance >= 0 ? 'var(--accent)' : 'var(--green)' },
+                    ].map(item => (
+                      <div key={item.label} style={{ background: 'var(--bg5)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--t3)', marginBottom: '4px' }}>{item.label}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: item.color }}>{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--t3)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+                  <th style={{ padding: '10px 12px' }}>Operator</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center' }}>Present Days</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Earned</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Advances Paid</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Pending</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salaryTracker.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--t3)', fontSize: '13px' }}>No operators yet.</td>
+                  </tr>
+                ) : (
+                  salaryTracker.rows.map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
+                      <td style={{ padding: '12px', fontWeight: 700, color: 'var(--t1)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Users size={14} style={{ color: 'var(--t3)' }} />
+                          {r.name}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center', color: 'var(--t2)', fontWeight: 600 }}>{r.presentCount} days</td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: 'var(--t1)', fontWeight: 700 }}>{fmtINR(r.earnedGross)}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: 'var(--t2)', fontWeight: 600 }}>{fmtINR(r.totalAdvances)}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 800, color: r.pendingBalance >= 0 ? 'var(--accent)' : 'var(--green)' }}>{fmtINR(r.pendingBalance)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 3+4: Earning Tracker (half width) beside Audit + Compliance ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobileApp ? '1fr' : '1fr 1fr', gap: '20px', marginBottom: 28, alignItems: 'start' }}>
+      <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: isMobileApp ? '18px 16px' : '24px', border: '1px solid var(--border)' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--t1)', marginBottom: '10px' }}>Individual Asset Earning &amp; Expense Tracker</h3>
         
+        {isMobileApp ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {analytics.assetStats.map(as => {
+              let badgeText = 'Standby';
+              let badgeColor = 'var(--t3)';
+              let badgeBg = 'var(--bg5)';
+
+              if (as.shifts > 0) {
+                if (as.margin > 25) {
+                  badgeText = 'High Yield';
+                  badgeColor = 'var(--green)';
+                  badgeBg = 'var(--green-s)';
+                } else if (as.margin > 0) {
+                  badgeText = 'Moderate';
+                  badgeColor = '#ffaa00';
+                  badgeBg = 'var(--amber-s)';
+                } else {
+                  badgeText = 'Loss Maker';
+                  badgeColor = 'var(--red)';
+                  badgeBg = 'var(--red-s)';
+                }
+              }
+
+              return (
+                <div
+                  key={as.reg}
+                  style={{ background: 'var(--bg4)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: 'var(--t1)', fontSize: '14px', fontWeight: 800 }}>{as.reg}</div>
+                      <div style={{ color: 'var(--t2)', fontSize: '11px', fontWeight: 500, marginTop: '1px' }}>{as.crane.type || 'Crane'} · {as.crane.model || 'N/A'}</div>
+                    </div>
+                    <span style={{ color: badgeColor, background: badgeBg, padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', flexShrink: 0 }}>
+                      {badgeText} ({as.margin.toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                    {[
+                      { label: 'Hours', value: fmtHours(as.hours), color: 'var(--t1)' },
+                      { label: 'Revenue', value: fmtINR(as.revenue), color: 'var(--green)' },
+                      { label: 'Expenses', value: fmtINR(as.totalExpenses), color: 'var(--red)' },
+                      { label: 'Net Profit', value: fmtINR(as.netProfit), color: as.netProfit >= 0 ? 'var(--green)' : 'var(--red)' },
+                    ].map(item => (
+                      <div key={item.label} style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--t3)', marginBottom: '2px' }}>{item.label}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: item.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--t3)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
-                <th style={{ padding: '12px 10px' }}>Vehicle (Reg)</th>
-                <th style={{ padding: '12px 10px' }}>Hours Logged</th>
-                <th style={{ padding: '12px 10px' }}>Earned Revenue</th>
-                <th style={{ padding: '12px 10px' }}>Total Expenses</th>
-                <th style={{ padding: '12px 10px' }}>Net Profit</th>
-                <th style={{ padding: '12px 10px' }}>Margin</th>
-                <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '8px 10px' }}>Vehicle (Reg)</th>
+                <th style={{ padding: '8px 10px' }}>Hours Logged</th>
+                <th style={{ padding: '8px 10px' }}>Earned Revenue</th>
+                <th style={{ padding: '8px 10px' }}>Total Expenses</th>
+                <th style={{ padding: '8px 10px' }}>Net Profit</th>
+                <th style={{ padding: '8px 10px' }}>Margin</th>
               </tr>
             </thead>
             <tbody>
               {analytics.assetStats.map(as => {
-                const isSelected = selectedCraneReg === as.reg;
                 let badgeText = 'Standby';
                 let badgeColor = 'var(--t3)';
                 let badgeBg = 'var(--bg5)';
@@ -495,45 +746,24 @@ export function AnalyticsPage({ active }: { active: boolean }) {
                 }
 
                 return (
-                  <tr 
-                    key={as.reg} 
-                    style={{ borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 700, color: 'var(--t1)', background: isSelected ? 'var(--bg4)' : 'transparent', transition: 'all 0.15s ease' }}
+                  <tr
+                    key={as.reg}
+                    style={{ borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 700, color: 'var(--t1)', transition: 'all 0.15s ease' }}
                   >
-                    <td style={{ padding: '16px 10px' }}>
+                    <td style={{ padding: '9px 10px' }}>
                       <div>
                         <div style={{ color: 'var(--t1)', fontSize: '14px', fontWeight: 800 }}>{as.reg}</div>
                         <div style={{ color: 'var(--t2)', fontSize: '11px', fontWeight: 500, marginTop: '2px' }}>{as.crane.type || 'Crane'} · {as.crane.model || 'N/A'}</div>
                       </div>
                     </td>
-                    <td style={{ padding: '16px 10px' }}>{fmtHours(as.hours)}</td>
-                    <td style={{ padding: '16px 10px', color: 'var(--green)' }}>{fmtINR(as.revenue)}</td>
-                    <td style={{ padding: '16px 10px', color: 'var(--red)' }}>{fmtINR(as.totalExpenses)}</td>
-                    <td style={{ padding: '16px 10px', color: as.netProfit >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtINR(as.netProfit)}</td>
-                    <td style={{ padding: '16px 10px' }}>
+                    <td style={{ padding: '9px 10px' }}>{fmtHours(as.hours)}</td>
+                    <td style={{ padding: '9px 10px', color: 'var(--green)' }}>{fmtINR(as.revenue)}</td>
+                    <td style={{ padding: '9px 10px', color: 'var(--red)' }}>{fmtINR(as.totalExpenses)}</td>
+                    <td style={{ padding: '9px 10px', color: as.netProfit >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtINR(as.netProfit)}</td>
+                    <td style={{ padding: '9px 10px' }}>
                       <span style={{ color: badgeColor, background: badgeBg, padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>
                         {badgeText} ({as.margin.toFixed(0)}%)
                       </span>
-                    </td>
-                    <td style={{ padding: '16px 10px', textAlign: 'right' }}>
-                      <button 
-                        onClick={() => setSelectedCraneReg(isSelected ? null : as.reg)}
-                        style={{
-                          padding: '6px 12px',
-                          background: 'var(--bg5)',
-                          color: 'var(--t1)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        {isSelected ? 'Collapse' : 'Details'}
-                        {isSelected ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                      </button>
                     </td>
                   </tr>
                 );
@@ -541,120 +771,12 @@ export function AnalyticsPage({ active }: { active: boolean }) {
             </tbody>
           </table>
         </div>
-
-        {/* ── Asset Drill-down Card Drawer ── */}
-        {selectedAssetDetail && (
-          <div style={{ marginTop: '24px', padding: '24px', background: 'var(--bg4)', borderRadius: '14px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-              <div>
-                <h4 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--t1)' }}>Granular Diagnostic Drawer: {selectedAssetDetail.reg}</h4>
-                <p style={{ fontSize: '12px', color: 'var(--t2)', marginTop: '2px' }}>Comprehensive runtime logs & overhead breakouts for selected dates</p>
-              </div>
-              <button 
-                onClick={() => setSelectedCraneReg(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--t3)', fontSize: '16px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-              {/* Asset stats breakdown */}
-              <div style={{ background: 'var(--bg5)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <h5 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: '12px' }}>Profit &amp; Overhead Splits</h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px', fontWeight: 700 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t2)' }}>Timesheet Revenue</span>
-                    <span style={{ color: 'var(--green)' }}>{fmtINR(selectedAssetDetail.revenue)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t2)' }}>Operator Wages (Shifts)</span>
-                    <span style={{ color: 'var(--t1)' }}>{fmtINR(selectedAssetDetail.operatorCost)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t2)' }}>Fuel Expenditures</span>
-                    <span style={{ color: 'var(--t1)' }}>{fmtINR(selectedAssetDetail.fuelCost)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t2)' }}>Maintenance Work</span>
-                    <span style={{ color: 'var(--t1)' }}>{fmtINR(selectedAssetDetail.maintenanceCost)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t2)' }}>Pro-rata EMI Cost</span>
-                    <span style={{ color: 'var(--t1)' }}>{fmtINR(selectedAssetDetail.emiCost)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t2)' }}>Pro-rata Fixed Overheads</span>
-                    <span style={{ color: 'var(--t1)' }}>{fmtINR(selectedAssetDetail.fixedCost)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '8px', fontWeight: 800 }}>
-                    <span style={{ color: 'var(--t1)' }}>Net Profit Margin</span>
-                    <span style={{ color: selectedAssetDetail.netProfit >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmtINR(selectedAssetDetail.netProfit)} ({selectedAssetDetail.margin.toFixed(0)}%)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Fuel and Operating logs */}
-              <div style={{ background: 'var(--bg5)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-                <h5 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: '12px' }}>Operational Efficiency</h5>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-                  <div style={{ background: 'var(--bg4)', flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '10px', color: 'var(--t2)', fontWeight: 800 }}>Fuel Efficiency</div>
-                    <div style={{ fontSize: '16px', color: 'var(--t1)', fontWeight: 800, marginTop: '2px' }}>{selectedAssetDetail.lph.toFixed(1)} L/H</div>
-                  </div>
-                  <div style={{ background: 'var(--bg4)', flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '10px', color: 'var(--t2)', fontWeight: 800 }}>Fuel Litres Filled</div>
-                    <div style={{ fontSize: '16px', color: 'var(--t1)', fontWeight: 800, marginTop: '2px' }}>{selectedAssetDetail.fuelLitres.toFixed(0)} L</div>
-                  </div>
-                </div>
-
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '120px' }}>
-                  <h6 style={{ fontSize: '10px', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '6px' }}>Fuel Logs</h6>
-                  {selectedAssetDetail.fuelLogs.length === 0 ? (
-                    <div style={{ fontSize: '11px', color: 'var(--t3)', padding: '6px 0' }}>No fuel fillings in selected period.</div>
-                  ) : (
-                    selectedAssetDetail.fuelLogs.map((fl: any, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        <span style={{ color: 'var(--t2)' }}>{fl.date}</span>
-                        <span style={{ color: 'var(--t1)', fontWeight: 700 }}>{fl.litres} L · {fmtINR(fl.cost)}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Maintenance logs list */}
-              <div style={{ background: 'var(--bg5)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-                <h5 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: '12px' }}>Maintenance History</h5>
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '180px' }}>
-                  {selectedAssetDetail.maintenanceLogs.length === 0 ? (
-                    <div style={{ fontSize: '11px', color: 'var(--t3)', padding: '10px 0' }}>No maintenance records found.</div>
-                  ) : (
-                    selectedAssetDetail.maintenanceLogs.map((m: any, i) => (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700 }}>
-                          <span style={{ color: 'var(--t1)' }}>{m.type || 'General Service'}</span>
-                          <span style={{ color: 'var(--red)' }}>{fmtINR(m.cost)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--t2)' }}>
-                          <span>{m.date}</span>
-                          <span style={{ fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{m.notes}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
         )}
       </div>
 
-      {/* ── Section 4: Logbook Scans & Timesheet Verification Audit ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginBottom: 28 }}>
-        <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: '24px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+      {/* Right half: Logbook Audit + Balances & Compliance stacked beside the tracker */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: isMobileApp ? '18px 16px' : '24px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--t1)' }}>Timesheet &amp; Logbook Scan Audit</h3>
             <p style={{ fontSize: '11px', color: 'var(--t2)', marginTop: '2px' }}>Logged timesheet entries with matching uploaded logbook scans</p>
@@ -712,7 +834,7 @@ export function AnalyticsPage({ active }: { active: boolean }) {
         </div>
 
         {/* ── Balances & Compliance Dashboard ── */}
-        <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: '24px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: 'var(--bg3)', borderRadius: '18px', padding: isMobileApp ? '18px 16px' : '24px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--t1)' }}>Balances &amp; Compliance Index</h3>
             <p style={{ fontSize: '11px', color: 'var(--t2)', marginTop: '2px' }}>Outstanding client dues, operator payables & RTO certificate flags</p>
@@ -761,6 +883,7 @@ export function AnalyticsPage({ active }: { active: boolean }) {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* ── Logbook Viewer Scan Overlay Modal ── */}

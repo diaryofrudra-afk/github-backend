@@ -17,22 +17,24 @@ import type {
   OwnerProfile,
 } from '../types';
 
+import { Capacitor } from '@capacitor/core';
+
 const BASE = import.meta.env.VITE_API_BASE || '/api';
 const API_BASE = BASE.endsWith('/') ? BASE.slice(0, -1) : BASE;
 
-// Detect if running in Android emulator (10.0.2.2 maps to host machine)
-function isAndroidEmulator(): boolean {
-  try {
-    const ua = navigator.userAgent;
-    // Capacitor adds "Capacitor" to the UA string on Android
-    return /Capacitor/i.test(ua) && /Android/i.test(ua);
-  } catch {
-    return false;
-  }
-}
+// On a native build (APK) the WebView is served from http://localhost, so a
+// relative '/api' path would hit the bundled app (returning index.html) instead
+// of the backend. Native must always use an absolute backend URL.
+const isNative = Capacitor.isNativePlatform();
 
-const isProxy = !BASE.startsWith('http') && !isAndroidEmulator();
-const ACTUAL_API_BASE = isAndroidEmulator() ? 'http://10.0.2.2:8000' : (isProxy ? '' : API_BASE);
+// Use the Vite dev proxy only in the browser when VITE_API_BASE is unset.
+const isProxy = !BASE.startsWith('http') && !isNative;
+// Native fallback (when VITE_API_BASE is unset): 10.0.2.2 maps to the host's
+// localhost on the Android emulator. Set VITE_API_BASE to override (e.g. a LAN
+// IP for a physical device).
+const ACTUAL_API_BASE = BASE.startsWith('http')
+  ? API_BASE
+  : (isNative ? 'http://10.0.2.2:8000/api' : '');
 
 // ── Token helpers ────────────────────────────────────────────────────────────
 

@@ -21,7 +21,7 @@ from .compliance.router import router as compliance_router
 from .maintenance.router import router as maintenance_router
 from .files.router import router as files_router
 from .notifications.router import router as notifications_router
-from .diagnostics.router import router as diagnostics_router
+from .vehicle_documents.router import router as vehicle_documents_router
 from .owner_profile.router import router as owner_profile_router
 from .tenants.router import router as tenants_router
 from .sync.router import router as sync_router
@@ -66,7 +66,7 @@ app.include_router(compliance_router)
 app.include_router(maintenance_router)
 app.include_router(files_router)
 app.include_router(notifications_router)
-app.include_router(diagnostics_router)
+app.include_router(vehicle_documents_router)
 app.include_router(owner_profile_router)
 app.include_router(tenants_router)
 app.include_router(sync_router)

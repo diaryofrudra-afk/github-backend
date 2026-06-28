@@ -4,11 +4,11 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Suprwise is a fleet management SaaS platform for crane/heavy equipment operators in India. This repository contains both the Python FastAPI backend (`github-backend-main/`) and the React frontend (`reactcodewebapp-main/`).
+Suprwise is a fleet management SaaS platform for crane/heavy equipment operators in India. This repository contains both the Python FastAPI backend (`suprwise/`) and the React frontend (`reactcodewebapp-main/`).
 
 ---
 
-## Backend (`github-backend-main/`)
+## Backend (`suprwise/`)
 
 ### Commands
 
@@ -79,7 +79,7 @@ No test framework configured (no pytest.ini, conftest.py). No linting configurat
 
 **Manual OTP generation for testing:**
 ```bash
-cd github-backend-main && python3 -c "
+python3 -c "
 import sqlite3, random, string
 from datetime import datetime, timezone, timedelta
 conn = sqlite3.connect('./data/suprwise.db')

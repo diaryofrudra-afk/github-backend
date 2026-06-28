@@ -10,23 +10,55 @@ import { VehicleTelemetry } from './VehicleTelemetry';
 import { TnTHistoryPanel } from './TnTHistoryPanel';
 import { BlackbuckHistoryModal } from './BlackbuckHistoryModal';
 import { EngineHistoryModal } from '../../components/EngineHistoryModal';
+import { NotificationsPanel } from '../../components/notifications/NotificationsPanel';
 import { api } from '../../services/api';
 import L from 'leaflet';
 import './GPSPageNew.css';
 
-type StatusFilter = 'all' | 'working' | 'idle' | 'alert' | 'off';
+type StatusFilter = 'all' | 'on' | 'off';
 
 function statusLabel(v: UnifiedVehicle): string {
-  const cat = getVehicleCategory(v);
-  if (cat === 'working') return (v.speed ?? 0) > 2 ? `Moving ${v.speed} km/h` : 'Lifting';
-  if (cat === 'idle')    return 'Idle (engine on)';
-  if (cat === 'alert')   return v.status === 'wire_disconnected' ? 'GPS wire off' : 'Needs attention';
-  return 'Not started';
+  return getVehicleCategory(v) === 'on' ? 'Engine On' : 'Engine Off';
 }
 
 function fmt(n: number | undefined | null, unit = ''): string {
   if (n == null) return '—';
   return `${n}${unit}`;
+}
+
+// Minutes since the engine last turned off, parsed from `ignition_off_since`
+// duration strings like "4h 5m" / "2d 3h" / "45m" / "30s" (Trak N Tell).
+// A smaller value means the engine shut off more recently, i.e. was on most
+// recently. Missing/unparseable values sort last (+Infinity).
+function offDurationMinutes(v: UnifiedVehicle): number {
+  const s = v.ignition_off_since;
+  if (!s) return Infinity;
+  let total = 0;
+  let matched = false;
+  for (const m of s.matchAll(/(\d+)\s*([dhms])/gi)) {
+    matched = true;
+    const n = Number(m[1]);
+    const unit = m[2].toLowerCase();
+    total += unit === 'd' ? n * 1440
+           : unit === 'h' ? n * 60
+           : unit === 'm' ? n
+           : n / 60; // seconds
+  }
+  return matched ? total : Infinity;
+}
+
+// Short "last seen" timestamp, e.g. "24 Jun, 03:42 PM". Returns "—" when absent.
+function fmtLastSeen(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 // Builds the "N vehicles · updated <date>" sub-line for a connected GPS provider.
@@ -41,10 +73,24 @@ function providerMeta(health: { vehicle_count?: number } | null | undefined, upd
   return parts.join(' · ');
 }
 
+function getVehicleDisplayName(v: UnifiedVehicle | null | undefined, cranes: any[]): string {
+  if (!v) return 'Unknown Truck';
+  const regNormalized = (v.registration_number || '').replace(/\s+/g, '').toUpperCase();
+  const crane = (cranes || []).find(c => (c.reg || '').replace(/\s+/g, '').toUpperCase() === regNormalized);
+  if (crane) {
+    const make = crane.make || '';
+    const model = crane.model || '';
+    if (make || model) {
+      return `${make} ${model}`.trim();
+    }
+  }
+  return v.name || 'Unknown Truck';
+}
+
 // ── MAIN PAGE ───────────────────────────────────────────────────────────────
 
 export function GPSPageNew({ active }: { active: boolean }) {
-  const { setState, showToast } = useApp();
+  const { state, setState, showToast } = useApp();
   const { vehicles, initialLoading, refetch, loading } = useUnifiedGPS();
   
   const { credentials: bbCredentials, health: bbHealth, fetchCredentials: bbFetchCredentials, fetchHealth: bbFetchHealth, deleteCredentials: bbDeleteCredentials } = useBlackbuckSettings();
@@ -52,8 +98,61 @@ export function GPSPageNew({ active }: { active: boolean }) {
   const { credentials: weCredentials, health: weHealth, fetchCredentials: weFetchCredentials, fetchHealth: weFetchHealth, deleteCredentials: weDeleteCredentials } = useWheelsEyeSettings();
 
   const [filter, setFilter] = useState<StatusFilter>('all');
+  const [fleetSearch, setFleetSearch] = useState('');
+  const [fleetSheetOpen, setFleetSheetOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<UnifiedVehicle | null>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const fleetScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameVal, setEditNameVal] = useState('');
+
+  // Reset name input value on selected vehicle or cranes list changes
+  useEffect(() => {
+    setIsEditingName(false);
+    if (selectedVehicle) {
+      setEditNameVal(getVehicleDisplayName(selectedVehicle, state.cranes));
+    }
+  }, [selectedVehicle, state.cranes]);
+
+  const handleRenameVehicle = async (newName: string) => {
+    if (!selectedVehicle || !newName.trim()) return;
+    
+    const regNormalized = selectedVehicle.registration_number.replace(/\s+/g, '').toUpperCase();
+    let matchingCrane = state.cranes.find(c => 
+      (c.reg || '').replace(/\s+/g, '').toUpperCase() === regNormalized
+    );
+    
+    try {
+      if (!matchingCrane) {
+        showToast("Registering vehicle to fleet database...", "info");
+        await api.syncGPSToFleet();
+        const updatedCranes = await api.getCranes();
+        setState(prev => ({ ...prev, cranes: updatedCranes }));
+        matchingCrane = updatedCranes.find(c => 
+          (c.reg || '').replace(/\s+/g, '').toUpperCase() === regNormalized
+        );
+      }
+      
+      if (!matchingCrane) {
+        showToast("Could not find or register this vehicle in the fleet database", "error");
+        return;
+      }
+      
+      const parts = newName.trim().split(/\s+/);
+      const make = parts[0] || '';
+      const model = parts.slice(1).join(' ') || '';
+      
+      showToast("Updating vehicle name...", "info");
+      await api.updateCrane(matchingCrane.id, { make, model });
+      
+      const updatedCranes = await api.getCranes();
+      setState(prev => ({ ...prev, cranes: updatedCranes }));
+      showToast("Vehicle renamed successfully!", "success");
+    } catch (e: any) {
+      showToast(e.message || "Failed to rename vehicle", "error");
+    }
+  };
 
   const [bbConfirmDelete, setBbConfirmDelete] = useState(false);
   const [tntConfirmDelete, setTntConfirmDelete] = useState(false);
@@ -79,9 +178,9 @@ export function GPSPageNew({ active }: { active: boolean }) {
   const [tntHistoryOpen, setTntHistoryOpen] = useState(false);
   const [bbHistoryOpen, setBbHistoryOpen] = useState(false);
   const [engineHistoryOpen, setEngineHistoryOpen] = useState(false);
-  const [syncingToFleet, setSyncingToFleet] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [addingToFleet, setAddingToFleet] = useState(false);
   const [showAllMetrics, setShowAllMetrics] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   // ── Notifications (engine ON/OFF events from the GPS poller) ──
   const [userKey, setUserKey] = useState<string | null>(null);
@@ -132,16 +231,43 @@ export function GPSPageNew({ active }: { active: boolean }) {
   const tntConfigured = tntHealth?.configured || tntCredentials?.configured;
   const weConfigured  = weHealth?.configured  || weCredentials?.configured;
 
-  const handleSyncToFleet = async () => {
-    setSyncingToFleet(true);
+  // Single manual control: refresh the live GPS data AND sync those vehicles into the
+  // Fleet (cranes) list. The refresh icon spins + turns accent while this runs.
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refetch();
+      if (vehicles.length > 0) {
+        const d = await api.syncGPSToFleet();
+        const updatedCranes = await api.getCranes();
+        setState(prev => ({ ...prev, cranes: updatedCranes }));
+        if (d.added > 0 || d.updated > 0) {
+          showToast(`${d.added} vehicles added${d.updated > 0 ? `, ${d.updated} updated` : ''}`, 'success');
+        }
+      }
+    } catch (e: any) { showToast(e.message || 'Network error', 'error'); }
+    finally { setRefreshing(false); }
+  };
+
+  // Explicit "Add to Fleet" action: pushes all live GPS vehicles into the Fleet
+  // (cranes) list via the existing /sync-to-fleet endpoint. Unlike the refresh
+  // side-effect, this always reports what it did so the user knows it ran.
+  const handleAddToFleet = async () => {
+    if (addingToFleet) return;
+    if (vehicles.length === 0) { showToast('No live GPS vehicles to add', 'info'); return; }
+    setAddingToFleet(true);
     try {
       const d = await api.syncGPSToFleet();
-      showToast(`${d.added} vehicles added${d.updated > 0 ? `, ${d.updated} updated` : ''}`, 'success');
-      
       const updatedCranes = await api.getCranes();
       setState(prev => ({ ...prev, cranes: updatedCranes }));
+      if (d.added > 0 || d.updated > 0) {
+        showToast(`${d.added} added to fleet${d.updated > 0 ? `, ${d.updated} updated` : ''}`, 'success');
+      } else {
+        showToast('Fleet already up to date', 'info');
+      }
     } catch (e: any) { showToast(e.message || 'Network error', 'error'); }
-    finally { setSyncingToFleet(false); }
+    finally { setAddingToFleet(false); }
   };
 
   // Called right after a provider connects so its vehicles auto-populate the Fleet
@@ -228,11 +354,9 @@ export function GPSPageNew({ active }: { active: boolean }) {
 
   // Derived stats
   const stats = useMemo(() => {
-    const working = vehicles.filter(v => getVehicleCategory(v) === 'working').length;
-    const idle    = vehicles.filter(v => getVehicleCategory(v) === 'idle').length;
-    const alert   = vehicles.filter(v => getVehicleCategory(v) === 'alert').length;
-    const off     = vehicles.filter(v => getVehicleCategory(v) === 'off').length;
-    return { working, idle, alert, off, total: vehicles.length };
+    const on  = vehicles.filter(v => getVehicleCategory(v) === 'on').length;
+    const off = vehicles.filter(v => getVehicleCategory(v) === 'off').length;
+    return { on, off, total: vehicles.length };
   }, [vehicles]);
 
   const filteredVehicles = useMemo(() => {
@@ -240,15 +364,50 @@ export function GPSPageNew({ active }: { active: boolean }) {
     if (filter !== 'all') {
       list = list.filter(v => getVehicleCategory(v) === filter);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(v => 
-        v.registration_number.toLowerCase().includes(q) || 
-        (v.name || '').toLowerCase().includes(q)
-      );
-    }
     return list;
-  }, [vehicles, filter, searchQuery]);
+  }, [vehicles, filter]);
+
+  // "Your fleet" strip order: engine-on vehicles first, then engine-off
+  // vehicles ordered by how recently their engine was last on (shortest
+  // off-duration first). Sort a copy so the memoized array isn't mutated.
+  const sortedFleet = useMemo(() => {
+    return [...filteredVehicles].sort((a, b) => {
+      const ga = getVehicleCategory(a) === 'on' ? 0 : 1;
+      const gb = getVehicleCategory(b) === 'on' ? 0 : 1;
+      if (ga !== gb) return ga - gb;
+      if (ga === 1) return offDurationMinutes(a) - offDurationMinutes(b);
+      return 0; // engine-on group: stable
+    });
+  }, [filteredVehicles]);
+
+  // Fleet list filtered by the mobile search box (matches name or registration).
+  const searchedFleet = useMemo(() => {
+    const q = fleetSearch.trim().toLowerCase();
+    if (!q) return sortedFleet;
+    return sortedFleet.filter(v =>
+      getVehicleDisplayName(v, state.cranes).toLowerCase().includes(q) ||
+      (v.registration_number || '').toLowerCase().includes(q)
+    );
+  }, [sortedFleet, fleetSearch, state.cranes]);
+
+  // Translate a vertical mouse-wheel delta into horizontal scroll so the fleet
+  // strip is scrollable with a plain mouse, not just a trackpad/shift-wheel.
+  const handleFleetWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = fleetScrollRef.current;
+    if (!el) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  };
+
+  // Chevron button: step right; cycle back to start when already at the end.
+  const handleFleetScrollButton = () => {
+    const el = fleetScrollRef.current;
+    if (!el) return;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    el.scrollTo({ left: atEnd ? 0 : el.scrollLeft + 250, behavior: 'smooth' });
+  };
 
   const zoomMap = (dir: number) => {
     if (mapRef.current) {
@@ -268,6 +427,7 @@ export function GPSPageNew({ active }: { active: boolean }) {
 
   const handleVehicleSelect = (v: UnifiedVehicle) => {
     setSelectedVehicle(v);
+    setFleetSheetOpen(false); // collapse the mobile fleet panel after picking
     if (mapRef.current && v.latitude && v.longitude) {
       mapRef.current.setView([v.latitude, v.longitude], 15);
     }
@@ -277,79 +437,6 @@ export function GPSPageNew({ active }: { active: boolean }) {
 
   return (
     <div className={`gps-page-container ${active ? 'active' : ''}`}>
-      <header className="gps-header">
-        <div className="header-left">
-          <h1>Live GPS</h1>
-          <div className="date-line">
-            {today} <span className="live-dot"></span> live
-          </div>
-        </div>
-        <div className="header-right">
-          <div className="gps-search-bar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--t3)' }}>
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input 
-              type="text" 
-              placeholder="Search fleet..." 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="notif-wrap">
-            <div className="header-btn" title="Notifications" onClick={() => setNotifOpen(o => !o)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              </svg>
-              {unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-            </div>
-            {notifOpen && (
-              <div className="notif-dropdown">
-                <div className="notif-dropdown-header">
-                  <span>Notifications</span>
-                  {userKey && notifications.length > 0 && (
-                    <button
-                      className="notif-clear-btn"
-                      onClick={async () => { try { await api.clearNotifications(userKey); setNotifications([]); } catch { /* noop */ } }}
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-                <div className="notif-list">
-                  {notifications.length === 0 ? (
-                    <div className="notif-empty">No notifications yet</div>
-                  ) : (
-                    notifications.map(n => (
-                      <div
-                        key={n.id}
-                        className={`notif-item ${n.read ? 'read' : 'unread'} type-${n.type}`}
-                        onClick={() => !n.read && handleMarkRead(n.id)}
-                      >
-                        <div className="notif-msg">{n.message}</div>
-                        <div className="notif-time">
-                          {new Date(n.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="header-btn" onClick={refetch} title="Refresh GPS data">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
-            </svg>
-          </div>
-          <div className="header-btn" onClick={() => setSettingsOpen(true)} title="GPS Settings">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
-            </svg>
-          </div>
-        </div>
-      </header>
-
       <div className="map-container">
         <GPSMap 
           vehicles={filteredVehicles} 
@@ -361,52 +448,80 @@ export function GPSPageNew({ active }: { active: boolean }) {
         {/* Fleet Status Panel */}
         <div className="fleet-status-panel fade-in">
           <div className="fleet-status-title">
-            Fleet status
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {vehicles.length > 0 && (
-                <button 
-                  className="header-btn" 
-                  onClick={handleSyncToFleet} 
-                  disabled={syncingToFleet} 
-                  title="Sync GPS vehicles to Fleet list"
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                Fleet status <span className="live-dot"></span>
+              </div>
+              <div className="date-line" style={{ marginTop: 2, fontSize: 11 }}>{today}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div className="header-btn" onClick={() => setSettingsOpen(true)} title="GPS Settings" style={{ width: 24, height: 24, borderRadius: 6, padding: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+                </svg>
+              </div>
+              <div
+                className="header-btn"
+                onClick={handleAddToFleet}
+                title="Add all live GPS vehicles to the Fleet"
+                style={{ width: 24, height: 24, borderRadius: 6, padding: 0, opacity: addingToFleet ? 0.5 : 1 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 19h13"/><path d="M7 11l2-4h6l2 4"/><path d="M4 11V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><circle cx="7" cy="17" r="1"/><circle cx="14" cy="17" r="1"/><line x1="19" y1="14" x2="19" y2="20"/><line x1="16" y1="17" x2="22" y2="17"/>
+                </svg>
+              </div>
+              <div className="notif-wrap">
+                <div 
+                  className={`header-btn ${notifOpen ? 'active' : ''} ${unreadCount > 0 ? 'has-unread' : ''}`} 
+                  title="Notifications" 
+                  onClick={() => setNotifOpen(o => !o)} 
                   style={{ width: 24, height: 24, borderRadius: 6, padding: 0 }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14M5 12h14" />
+                  <svg className="notif-bell-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                   </svg>
-                </button>
-              )}
+                  {unreadCount > 0 && (
+                    <span className="notification-badge-pulse">
+                      <span className="badge-ping"></span>
+                      <span className="badge-dot"></span>
+                    </span>
+                  )}
+                </div>
+                
+                {notifOpen && (
+                  <NotificationsPanel
+                    variant="dropdown"
+                    notifications={notifications}
+                    onClose={() => setNotifOpen(false)}
+                    onMarkRead={handleMarkRead}
+                    onClearAll={userKey ? async () => {
+                      try { await api.clearNotifications(userKey); setNotifications([]); } catch { /* noop */ }
+                    } : undefined}
+                  />
+                )}
+              </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m6 9 6 6 6-6"/>
               </svg>
             </div>
           </div>
-          <div className="status-row" onClick={() => setFilter('working')}>
-            <span className="status-dot working"></span>
-            <span className="status-label">Working</span>
-            <span className="status-count">{stats.working}/{stats.total}</span>
-          </div>
-          <div className="status-row" onClick={() => setFilter('idle')}>
-            <span className="status-dot idle"></span>
-            <span className="status-label">Idle at site</span>
-            <span className="status-count">{stats.idle}/{stats.total}</span>
-          </div>
-          <div className="status-row" onClick={() => setFilter('alert')}>
-            <span className="status-dot needs-attention"></span>
-            <span className="status-label">Needs attention</span>
-            <span className="status-count">{stats.alert}/{stats.total}</span>
-          </div>
-          <div className="status-row" onClick={() => setFilter('off')}>
-            <span className="status-dot off"></span>
-            <span className="status-label">Off / not started</span>
-            <span className="status-count">{stats.off}/{stats.total}</span>
-          </div>
-          <div className="status-filters">
-            <button className={`status-filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
-            <button className={`status-filter-btn ${filter === 'working' ? 'active' : ''}`} onClick={() => setFilter('working')}>Working</button>
-            <button className={`status-filter-btn ${filter === 'idle' ? 'active' : ''}`} onClick={() => setFilter('idle')}>Idle</button>
-            <button className={`status-filter-btn ${filter === 'alert' ? 'active' : ''}`} onClick={() => setFilter('alert')}>Alert</button>
-            <button className={`status-filter-btn ${filter === 'off' ? 'active' : ''}`} onClick={() => setFilter('off')}>Off</button>
+          <div className="status-summary">
+            <button
+              type="button"
+              className={`status-chip ${filter === 'on' ? 'active' : ''}`}
+              onClick={() => setFilter(filter === 'on' ? 'all' : 'on')}
+            >
+              <span className="status-dot on"></span>
+              <span className="status-chip-count">{stats.on}</span> On
+            </button>
+            <button
+              type="button"
+              className={`status-chip ${filter === 'off' ? 'active' : ''}`}
+              onClick={() => setFilter(filter === 'off' ? 'all' : 'off')}
+            >
+              <span className="status-dot off"></span>
+              <span className="status-chip-count">{stats.off}</span> Off
+            </button>
           </div>
 
           {/* GPS Provider Errors */}
@@ -422,6 +537,11 @@ export function GPSPageNew({ active }: { active: boolean }) {
 
         {/* Map Controls */}
         <div className="map-controls">
+          <div className={`map-ctrl-btn${refreshing ? ' syncing' : ''}`} onClick={handleRefresh} title="Refresh GPS data & sync to Fleet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+            </svg>
+          </div>
           <div className="map-ctrl-btn" onClick={() => zoomMap(1)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -443,10 +563,6 @@ export function GPSPageNew({ active }: { active: boolean }) {
         {selectedVehicle && (
           <div className="vehicle-panel fade-in">
             <div className="vehicle-panel-header">
-              <div className="vehicle-status-toggle">
-                <div className={`toggle-switch ${selectedVehicle.engine_on || selectedVehicle.ignition === 'on' ? 'on' : ''}`}></div>
-                <span>{selectedVehicle.engine_on || selectedVehicle.ignition === 'on' ? 'On' : 'Off'}</span>
-              </div>
               <button className="vehicle-close-btn" onClick={() => setSelectedVehicle(null)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -459,67 +575,151 @@ export function GPSPageNew({ active }: { active: boolean }) {
                 <div className="vehicle-flag"></div>
                 <span className="vehicle-id">{selectedVehicle.registration_number}</span>
               </div>
-              <div className="vehicle-name">
-                {selectedVehicle.name || 'Unknown Truck'}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                </svg>
+              <div className="vehicle-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {isEditingName ? (
+                  <form 
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setIsEditingName(false);
+                      if (selectedVehicle && editNameVal.trim()) {
+                        await handleRenameVehicle(editNameVal);
+                      }
+                    }}
+                    style={{ display: 'flex', width: '100%', gap: 6 }}
+                  >
+                    <input
+                      type="text"
+                      className="vehicle-name-input"
+                      value={editNameVal}
+                      onChange={(e) => setEditNameVal(e.target.value)}
+                      autoFocus
+                      onBlur={async () => {
+                        setIsEditingName(false);
+                        if (selectedVehicle && editNameVal.trim() && editNameVal !== getVehicleDisplayName(selectedVehicle, state.cranes)) {
+                          await handleRenameVehicle(editNameVal);
+                        }
+                      }}
+                      style={{
+                        background: 'var(--bg4)',
+                        border: '1px solid var(--gps-panel-border)',
+                        borderRadius: 6,
+                        color: 'var(--t1)',
+                        padding: '4px 8px',
+                        fontSize: 13,
+                        fontFamily: 'var(--fb)',
+                        flex: 1,
+                        outline: 'none'
+                      }}
+                    />
+                    <button 
+                      type="submit" 
+                      style={{
+                        background: 'var(--accent)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '4px 10px',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Save
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <span 
+                      onClick={() => {
+                        setEditNameVal(getVehicleDisplayName(selectedVehicle, state.cranes));
+                        setIsEditingName(true);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {getVehicleDisplayName(selectedVehicle, state.cranes)}
+                    </span>
+                    <svg 
+                      onClick={() => {
+                        setEditNameVal(getVehicleDisplayName(selectedVehicle, state.cranes));
+                        setIsEditingName(true);
+                      }}
+                      style={{ width: 14, height: 14, cursor: 'pointer', color: 'var(--t3)' }}
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="engine-lock">
-              <div className="engine-lock-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-              </div>
-              <div className="engine-lock-text">
-                <div className="engine-lock-label">Engine Lock</div>
-                <div className="engine-lock-status">Ready to start</div>
-              </div>
-              <button className="lock-btn">LOCK</button>
-            </div>
+            {selectedVehicle.provider === 'trakntell' ? (
+              <>
+                <div className="metrics-grid">
+                  <div className="metric-card">
+                    <div className="metric-label">Load on Hook</div>
+                    <div className="metric-value">{fmt(selectedVehicle.sli_load, ' T')}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Engine Hours</div>
+                    <div className="metric-value">{fmt(selectedVehicle.today_engine_hours, ' hrs')}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Boom Angle</div>
+                    <div className="metric-value">{fmt(selectedVehicle.sli_angle, '°')}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Diesel</div>
+                    <div className="metric-value">{fmt(selectedVehicle.j1939_fuel_level, '%')}</div>
+                  </div>
+                </div>
 
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <div className="metric-label">Load on Hook</div>
-                <div className="metric-value">{fmt(selectedVehicle.sli_load, ' T')}</div>
-              </div>
-              <div className="metric-card">
-                <div className="metric-label">Engine Hours</div>
-                <div className="metric-value">{fmt(selectedVehicle.today_engine_hours, ' hrs')}</div>
-              </div>
-              <div className="metric-card">
-                <div className="metric-label">Boom Angle</div>
-                <div className="metric-value">{fmt(selectedVehicle.sli_angle, '°')}</div>
-              </div>
-              <div className="metric-card">
-                <div className="metric-label">Diesel</div>
-                <div className="metric-value">{fmt(selectedVehicle.j1939_fuel_level, '%')}</div>
-              </div>
-            </div>
+                {showAllMetrics && <VehicleTelemetry vehicle={selectedVehicle} />}
 
-            {showAllMetrics && <VehicleTelemetry vehicle={selectedVehicle} />}
+                <button className="show-less-btn" onClick={() => setShowAllMetrics(!showAllMetrics)}>
+                  {showAllMetrics ? 'Show less' : 'Show all sensor data...'}
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Blackbuck / WheelsEye only report location + engine status,
+                    so the panel shows just movement basics — no crane sensors. */}
+                <div className="metrics-grid">
+                  <div className="metric-card">
+                    <div className="metric-label">Status</div>
+                    <div className="metric-value">{statusLabel(selectedVehicle)}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Speed</div>
+                    <div className="metric-value">{fmt(selectedVehicle.speed, ' km/h')}</div>
+                  </div>
+                </div>
 
-            <button className="show-less-btn" onClick={() => setShowAllMetrics(!showAllMetrics)}>
-              {showAllMetrics ? 'Show less' : 'Show all sensor data...'}
-            </button>
+                <div className="telemetry-address">
+                  {selectedVehicle.address
+                    || (selectedVehicle.latitude != null && selectedVehicle.longitude != null
+                      ? `${selectedVehicle.latitude.toFixed(5)}, ${selectedVehicle.longitude.toFixed(5)}`
+                      : 'Location unavailable')}
+                  {selectedVehicle.last_updated && (
+                    <span style={{ color: 'var(--t3)', fontSize: 11, marginLeft: 6, whiteSpace: 'nowrap' }}>
+                      · {fmtLastSeen(selectedVehicle.last_updated)}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className="vehicle-actions">
-              <button className="vehicle-action-btn" onClick={() => {
-                if (selectedVehicle.provider === 'trakntell') setTntHistoryOpen(true);
-                else if (selectedVehicle.provider === 'blackbuck') setBbHistoryOpen(true);
-              }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-                </svg>
-                History
-              </button>
               <button className="vehicle-action-btn" onClick={() => setEngineHistoryOpen(true)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/><polyline points="12 7 12 12 15 14"/>
                 </svg>
-                Engine Info
+                Status History
               </button>
             </div>
           </div>
@@ -527,11 +727,39 @@ export function GPSPageNew({ active }: { active: boolean }) {
       </div>
 
       {/* Bottom Fleet strip */}
-      <div className="bottom-section">
+      <div className={`bottom-section${fleetSheetOpen ? ' open' : ''}`}>
+        {/* Mobile-only search row (CSS-hidden on desktop) */}
+        <div className="fleet-search-row">
+          <div className="fleet-search-input-wrap">
+            <svg className="fleet-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input
+              className="fleet-search-input"
+              type="text"
+              value={fleetSearch}
+              onChange={e => setFleetSearch(e.target.value)}
+              placeholder="Search fleet…"
+              aria-label="Search fleet"
+            />
+          </div>
+          <button
+            type="button"
+            className={`fleet-sheet-toggle${fleetSheetOpen ? ' open' : ''}`}
+            onClick={() => setFleetSheetOpen(o => !o)}
+            aria-expanded={fleetSheetOpen}
+            aria-label="Toggle fleet list"
+          >
+            <span>Fleet · {searchedFleet.length}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+          </button>
+        </div>
         <div className="bottom-section-inner">
           <div className="fleet-title-label">Your fleet</div>
-          <div className="fleet-chips">
-            {vehicles.map(v => {
+          <div className="fleet-chips" ref={fleetScrollRef} onWheel={handleFleetWheel}>
+            {searchedFleet.map(v => {
               const cat = getVehicleCategory(v);
               const isActive = selectedVehicle?.registration_number === v.registration_number;
               return (
@@ -540,26 +768,31 @@ export function GPSPageNew({ active }: { active: boolean }) {
                   className={`fleet-chip ${isActive ? 'active' : ''}`}
                   onClick={() => handleVehicleSelect(v)}
                 >
-                  <div className={`chip-dot ${cat === 'alert' ? 'red' : cat === 'working' ? 'green' : cat === 'idle' ? 'orange' : 'gray'}`}></div>
+                  <div className={`chip-dot ${cat === 'on' ? 'green' : 'gray'}`}></div>
                   <div className={`chip-icon ${isActive ? 'primary' : 'gray'}`}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 19h18"/><path d="M7 11l2-4h6l2 4"/><path d="M4 11V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/>
                     </svg>
                   </div>
                   <div className="chip-info">
-                    <div className="chip-name">{v.name || 'Unknown Truck'}</div>
+                    <div className="chip-name">{getVehicleDisplayName(v, state.cranes)}</div>
                     <div className="chip-id">{v.registration_number}</div>
-                    {cat === 'alert' && <div className="chip-alert-text">{statusLabel(v)}</div>}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="fleet-chip-scroll-hint" style={{ color: 'var(--t3)', flexShrink: 0 }}>
+          <button
+            type="button"
+            className="fleet-chip-scroll-hint"
+            style={{ color: 'var(--t3)', flexShrink: 0 }}
+            onClick={handleFleetScrollButton}
+            aria-label="Scroll fleet"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
-          </div>
+          </button>
         </div>
       </div>
 

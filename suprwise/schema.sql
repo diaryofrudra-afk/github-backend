@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS owner_profiles (
     city TEXT NOT NULL DEFAULT '',
     state TEXT NOT NULL DEFAULT '',
     gst TEXT NOT NULL DEFAULT '',
+    pan TEXT NOT NULL DEFAULT '',
     website TEXT NOT NULL DEFAULT '',
     default_limit TEXT NOT NULL DEFAULT '8',
     photo TEXT NOT NULL DEFAULT ''
@@ -230,8 +231,6 @@ CREATE TABLE IF NOT EXISTS compliance (
     crane_reg TEXT NOT NULL,
     insurance_date TEXT,
     insurance_notes TEXT NOT NULL DEFAULT '',
-    rto_date TEXT,
-    rto_notes TEXT NOT NULL DEFAULT '',
     fitness_date TEXT,
     fitness_notes TEXT NOT NULL DEFAULT '',
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
@@ -272,15 +271,23 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_key, tenant_id);
 
-CREATE TABLE IF NOT EXISTS diagnostics (
+CREATE TABLE IF NOT EXISTS vehicle_documents (
     id TEXT PRIMARY KEY,
     crane_reg TEXT NOT NULL,
-    health TEXT NOT NULL DEFAULT 'offline',
-    snapshot TEXT NOT NULL DEFAULT '{}',
+    doc_type TEXT NOT NULL DEFAULT 'other',
+    title TEXT NOT NULL DEFAULT '',
+    doc_number TEXT NOT NULL DEFAULT '',
+    issue_date TEXT,
+    expiry_date TEXT,
+    amount REAL,
+    file_id TEXT,
+    notes TEXT NOT NULL DEFAULT '',
+    last_reminded TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    UNIQUE(crane_reg, tenant_id)
+    tenant_id TEXT NOT NULL REFERENCES tenants(id)
 );
+CREATE INDEX IF NOT EXISTS idx_vehicle_documents_tenant ON vehicle_documents(tenant_id, crane_reg);
 
 CREATE TABLE IF NOT EXISTS attendance (
     id TEXT PRIMARY KEY,
@@ -359,6 +366,7 @@ CREATE TABLE IF NOT EXISTS owner_profiles (
     state TEXT NOT NULL DEFAULT '',
     pincode TEXT NOT NULL DEFAULT '',
     gst TEXT NOT NULL DEFAULT '',
+    pan TEXT NOT NULL DEFAULT '',
     website TEXT NOT NULL DEFAULT '',
     default_limit TEXT NOT NULL DEFAULT '8',
     photo TEXT NOT NULL DEFAULT ''
@@ -612,15 +620,23 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_key, tenant_id);
 
-CREATE TABLE IF NOT EXISTS diagnostics (
+CREATE TABLE IF NOT EXISTS vehicle_documents (
     id TEXT PRIMARY KEY,
     crane_reg TEXT NOT NULL,
-    health TEXT NOT NULL DEFAULT 'offline',
-    snapshot TEXT NOT NULL DEFAULT '{}',
+    doc_type TEXT NOT NULL DEFAULT 'other',
+    title TEXT NOT NULL DEFAULT '',
+    doc_number TEXT NOT NULL DEFAULT '',
+    issue_date TEXT,
+    expiry_date TEXT,
+    amount REAL,
+    file_id TEXT,
+    notes TEXT NOT NULL DEFAULT '',
+    last_reminded TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    UNIQUE(crane_reg, tenant_id)
+    tenant_id TEXT NOT NULL REFERENCES tenants(id)
 );
+CREATE INDEX IF NOT EXISTS idx_vehicle_documents_tenant ON vehicle_documents(tenant_id, crane_reg);
 
 CREATE TABLE IF NOT EXISTS attendance (
     id TEXT PRIMARY KEY,

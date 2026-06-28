@@ -65,6 +65,7 @@ export interface OwnerProfile {
   state: string;
   pincode: string;
   gst: string;
+  pan: string;
   website: string;
   defaultLimit: string;
   default_limit?: string;
@@ -275,6 +276,26 @@ export interface ComplianceRecord {
   fitness?: { date: string; notes?: string };
 }
 
+export type VehicleDocType =
+  | 'rc' | 'insurance' | 'fitness' | 'pollution'
+  | 'permit' | 'road_tax' | 'emi' | 'other';
+
+export type VehicleDocStatus = 'valid' | 'expiring' | 'expired';
+
+export interface VehicleDocument {
+  id: string;
+  craneReg: string;
+  docType: VehicleDocType;
+  title?: string;
+  docNumber?: string;
+  issueDate?: string | null;
+  expiryDate?: string | null;   // for emi: next due date
+  amount?: number | null;       // for emi/road_tax: installment / fee
+  fileId?: string | null;       // FK to a files row holding the scan
+  notes?: string;
+  status?: VehicleDocStatus;    // derived server-side
+}
+
 export interface MaintenanceRecord {
   [reg: string]: Array<{ id: string; date: string; type: string; cost?: number; notes?: string }>;
 }
@@ -412,7 +433,7 @@ export interface AppState {
   cameras: Camera[];
   integrations: { fuel: Record<string, unknown>; cameras: Record<string, unknown> };
   advancePayments: Record<string, unknown>;
-  diagnostics: Record<string, unknown>;
+  vehicleDocuments: VehicleDocument[];
   clients: Client[];
   invoices: Invoice[];
   payments: Payment[];

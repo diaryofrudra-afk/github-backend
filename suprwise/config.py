@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     GPS_POLL_INTERVAL_SECONDS: int = 45
 
     # GSTIN Verification API Key
-    GST_VERIFICATION_API_KEY: str = "04171078fc8a047afef2e227f405c4fb"
+    GST_VERIFICATION_API_KEY: str = "d9100b659eef99b9779a7ff5cf78f3a8"
 
     class Config:
         env_file = ".env"

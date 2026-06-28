@@ -12,15 +12,34 @@ Runs entirely server-side, so it works even when no browser is open.
 """
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
 from .config import settings
 from .database import get_db
 from .engine_status.service import process_vehicle_engine_status
+from .vehicle_documents.service import scan_document_expiries
 
 logger = logging.getLogger("suprwise.gps_poller")
 
 _task: Optional[asyncio.Task] = None
+
+# Throttle the document-expiry reminder pass so it runs at most ~once / 6h even
+# though the GPS poll loop ticks every GPS_POLL_INTERVAL_SECONDS.
+_DOC_SCAN_INTERVAL_SECONDS = 6 * 60 * 60
+_last_doc_scan: Optional[datetime] = None
+
+
+async def _maybe_scan_document_expiries(db) -> None:
+    global _last_doc_scan
+    now = datetime.now(timezone.utc)
+    if _last_doc_scan is not None and (now - _last_doc_scan).total_seconds() < _DOC_SCAN_INTERVAL_SECONDS:
+        return
+    _last_doc_scan = now
+    try:
+        await scan_document_expiries(db)
+    except Exception as e:
+        logger.warning("Document expiry scan failed: %s", e)
 
 
 async def _users_with_gps_creds(db) -> list[tuple[str, str]]:
@@ -90,6 +109,8 @@ async def _poll_user(db, user_id: str, tenant_id: str) -> None:
 
 async def poll_once() -> None:
     db = await get_db()
+    # Document-expiry reminders are independent of GPS credentials.
+    await _maybe_scan_document_expiries(db)
     users = await _users_with_gps_creds(db)
     if not users:
         logger.debug("GPS poller: no users with GPS credentials")

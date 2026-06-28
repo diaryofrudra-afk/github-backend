@@ -904,11 +904,25 @@
 
 /* ══ SETTINGS MODAL ══ */
 .settings-modal {
-  max-width: 860px !important;
+  max-width: 720px !important;
   width: 90vw !important;
   max-height: 90vh !important;
   overflow-y: auto !important;
   padding: 28px 32px !important;
+}
+
+/* Avatar edit (camera) button — subtle until the avatar is hovered */
+.settings-avatar .settings-avatar-edit {
+  opacity: 0;
+  transition: opacity 0.18s ease, color 0.15s ease, background 0.15s ease;
+}
+.settings-avatar:hover .settings-avatar-edit,
+.settings-avatar .settings-avatar-edit:focus-visible {
+  opacity: 1;
+}
+.settings-avatar .settings-avatar-edit:hover {
+  color: var(--accent) !important;
+  background: var(--bg3) !important;
 }
 
 /* Fix text visibility in settings modal */

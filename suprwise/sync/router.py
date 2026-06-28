@@ -15,6 +15,23 @@ def _enc(val):
     return val
 
 
+def _decode_rows(rows, columns):
+    """Parse the given JSON-text columns back into arrays/objects on each row.
+
+    Document tables store `items` (and invoices also store terms/shipping/etc.)
+    as JSON strings; the frontend expects them as real arrays/objects.
+    """
+    for row in rows:
+        for col in columns:
+            val = row.get(col)
+            if isinstance(val, str):
+                try:
+                    row[col] = json.loads(val)
+                except (ValueError, TypeError):
+                    pass
+    return rows
+
+
 def _get(row: dict, key: str, default=None):
     return row.get(key, default)
 
@@ -371,12 +388,15 @@ async def export_data(user=Depends(get_current_user), db=Depends(get_db)):
     operators = await fetch_all("operators")
     cameras = await fetch_all("cameras")
     clients = await fetch_all("clients")
-    invoices = await fetch_all("invoices")
+    invoices = _decode_rows(
+        await fetch_all("invoices"),
+        ("items", "terms", "custom_fields", "advanced_options", "shipping"),
+    )
     payments = await fetch_all("payments")
     credit_notes = await fetch_all("credit_notes")
-    quotations = await fetch_all("quotations")
-    proformas = await fetch_all("proformas")
-    challans = await fetch_all("challans")
+    quotations = _decode_rows(await fetch_all("quotations"), ("items", "terms"))
+    proformas = _decode_rows(await fetch_all("proformas"), ("items",))
+    challans = _decode_rows(await fetch_all("challans"), ("items",))
     notifications = await fetch_all("notifications")
     attendance_records = await fetch_all("attendance")
 

@@ -3,17 +3,17 @@
    ============================================================ */
 
 .de-shell {
-  --de-bg: #faf6ef;
-  --de-card: #ffffff;
-  --de-border: #ece4d4;
-  --de-border-strong: #d9cdb3;
-  --de-text: #1c1a17;
-  --de-text-soft: #6b6256;
-  --de-text-mute: #9c9384;
-  --de-accent: #ff6b35;
-  --de-accent-soft: #fff4ef;
-  --de-accent-tile: #fff4ef;
-  --de-shadow: 0 1px 2px rgba(28, 26, 23, 0.04);
+  --de-bg: var(--bg);
+  --de-card: var(--bg2);
+  --de-border: var(--border);
+  --de-border-strong: var(--border2);
+  --de-text: var(--t1);
+  --de-text-soft: var(--t2);
+  --de-text-mute: var(--t3);
+  --de-accent: var(--accent);
+  --de-accent-soft: var(--accent-s);
+  --de-accent-tile: var(--accent-d);
+  --de-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   --de-radius: 14px;
   --de-radius-sm: 10px;
   background: var(--de-bg);
@@ -87,18 +87,9 @@
   border-top: 1px solid var(--de-border);
 }
 
+/* The --de-* tokens above resolve to the app's global theme variables, which
+   already switch with [data-theme]; only color-scheme needs an explicit hint. */
 [data-theme="dark"] .de-shell {
-  --de-bg: #0a0a0a;
-  --de-card: #111111;
-  --de-border: rgba(255, 255, 255, 0.08);
-  --de-border-strong: rgba(255, 255, 255, 0.15);
-  --de-text: #f0f0f0;
-  --de-text-soft: #a0a0a0;
-  --de-text-mute: #555555;
-  --de-accent: #ec7a2d;
-  --de-accent-soft: rgba(236, 122, 45, 0.15);
-  --de-accent-tile: rgba(236, 122, 45, 0.08);
-  --de-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 
@@ -129,13 +120,9 @@
 .de-title h2 { margin: 0; font-size: 19px; font-weight: 600; }
 .de-title .draft-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  background: #e7f6ee; color: #1f7c47;
+  background: var(--green-s); color: var(--green);
   padding: 4px 10px; border-radius: 999px;
   font-size: 12px; font-weight: 500;
-}
-[data-theme="dark"] .de-title .draft-chip {
-  background: rgba(31, 124, 71, 0.2);
-  color: #4ade80;
 }
 .de-title .sub { display: block; color: var(--de-text-soft); font-size: 12px; margin-top: 2px; }
 .de-actions { display: flex; gap: 8px; }
@@ -159,7 +146,7 @@
   color: #fff;
   border-color: var(--de-accent);
 }
-.de-btn.primary:hover { background: #d76b22; border-color: #d76b22; color: #fff; }
+.de-btn.primary:hover { background: var(--accent-solid); border-color: var(--accent-solid); color: #fff; }
 
 /* Section tabs */
 .de-tabs {
@@ -272,6 +259,8 @@
 
 .de-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .de-grid-2-tight { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.de-item-field { display: contents; }
+.de-item-mobile-label { display: none; }
 
 /* Header — preview tile */
 .de-preview-tile {
@@ -403,6 +392,7 @@
 .de-item-main .meta {
   font-size: 11px; color: var(--de-text-mute); margin-top: 2px;
   display: flex; gap: 10px;
+  flex-wrap: wrap;
 }
 
 .de-item-num {
@@ -478,7 +468,7 @@
   display: inline-flex; align-items: center; gap: 6px;
   transition: background .15s ease;
 }
-.de-add-line:hover { background: #d76b22; }
+.de-add-line:hover { background: var(--accent-solid); }
 
 /* Totals sidebar */
 .de-totals-card { background: var(--de-card); border: 1px solid var(--de-border); border-radius: var(--de-radius); overflow: hidden; }
@@ -541,6 +531,164 @@
   font-size: 11px; color: var(--de-text-mute);
 }
 
+@media (max-width: 768px) {
+  .mobile-owner-shell .billing-page .de-shell,
+  .mobile-owner-shell .billing-page .de-shell.de-compact {
+    margin-left: -14px;
+    margin-right: -14px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .de-shell {
+    min-height: auto;
+    padding: 12px 14px 120px;
+  }
+
+  .de-shell.de-compact {
+    padding: 10px 14px 24px;
+  }
+
+  .de-topbar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 0 0 12px;
+  }
+
+  .de-back {
+    justify-content: center;
+  }
+
+  .de-title {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .de-title h2 {
+    font-size: 18px;
+  }
+
+  .de-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .de-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding: 10px 12px;
+  }
+
+  .de-grid-2,
+  .de-grid-2-tight {
+    grid-template-columns: 1fr;
+  }
+
+  .de-card,
+  .de-more-head,
+  .de-more-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .de-items-table {
+    display: none;
+  }
+
+  .de-item-row {
+    grid-template-columns: 24px minmax(0, 1fr) 24px;
+    gap: 10px;
+    padding: 12px 0;
+  }
+
+  .de-item-main {
+    grid-column: 2;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .de-item-field {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 34px;
+  }
+
+  .de-item-mobile-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--de-text-mute);
+  }
+
+  .de-item-num {
+    margin: 0;
+  }
+
+  .de-item-amount {
+    padding: 0;
+    text-align: left;
+    font-size: 16px;
+  }
+
+  .de-item-expand {
+    padding: 12px 0 0 34px;
+  }
+
+  .de-item-expand-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .de-item-expand-actions {
+    flex-direction: column;
+    justify-content: stretch;
+  }
+
+  .de-item-expand-actions .de-btn {
+    width: 100%;
+  }
+
+  .de-item-footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 0 0;
+  }
+
+  .de-add-line {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .de-totals-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .de-words-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .de-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .de-item-row > .de-item-field {
+    padding-left: 0;
+  }
+
+  .de-item-expand {
+    padding-left: 0;
+  }
+}
+
 .de-words-card {
   background: var(--de-card);
   border: 1px solid var(--de-border);
@@ -558,6 +706,13 @@
 .de-words-row .text { font-size: 13px; font-weight: 500; }
 .de-words-row button { background: transparent; border: none; cursor: pointer; color: var(--de-text-mute); }
 .de-words-row button:hover { color: var(--de-accent); }
+
+@media (max-width: 768px) {
+  .de-words-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
 
 /* Terms — tight list */
 .de-terms-help {
@@ -596,7 +751,7 @@
   background: transparent; border: none; cursor: pointer; color: var(--de-text-mute);
   padding: 2px; display: flex; align-items: flex-start;
 }
-.de-term-row .del:hover { color: #c43a3a; }
+.de-term-row .del:hover { color: var(--red); }
 
 /* Sticky bottom bar */
 .de-sticky-bar {

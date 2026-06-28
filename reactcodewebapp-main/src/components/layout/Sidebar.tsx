@@ -67,10 +67,10 @@ const CamerasIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const DiagnosticsIcon = (props: React.SVGProps<SVGSVGElement>) => (
+const DocumentsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M3.5 9h2l2-3.5 2.5 7 2-4 1.5 2.5H15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+    <path d="M4 1.5h6L14.5 6v10a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M9.5 1.5V6h4.5M6 9.5h6M6 12.5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -119,7 +119,7 @@ const COMMAND_ITEMS: NavItem[] = [
   { page: 'gps', name: 'Live GPS', icon: GPSIcon },
   { page: 'fuel', name: 'Fuel', icon: FuelIcon },
   { page: 'cameras', name: 'Cameras', icon: CamerasIcon },
-  { page: 'diagnostics', name: 'Diagnostics', icon: DiagnosticsIcon, countId: 'nc-diag' },
+  { page: 'diagnostics', name: 'Documents', icon: DocumentsIcon, countId: 'nc-diag' },
 ];
 
 const MANAGE_ITEMS: NavItem[] = [

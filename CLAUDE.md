@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Suprwise is a fleet management SaaS platform for crane/heavy equipment operators in India. This repository contains both the Python FastAPI backend (`github-backend-main/`) and the React frontend (`reactcodewebapp-main/`).
+Suprwise is a fleet management SaaS platform for crane/heavy equipment operators in India. This repository contains both the Python FastAPI backend (`suprwise/`) and the React frontend (`reactcodewebapp-main/`).
 
 ---
 
-## Backend (`github-backend-main/`)
+## Backend (`suprwise/`)
 
 ### Commands
 
@@ -41,8 +41,6 @@ This runs all test suites and reports results. **Run this after startup** to ver
 
 **Test coverage:**
 - `suprwise/auth/test_endpoints.py` — 7 tests covering register, login, OTP flow, test-login, password change, error cases, multi-tenant operators
-
-**Important:** The `github-backend-main/` subdirectory contains an older backend copy. Do not edit it or run its tests. The live backend is `./suprwise/` (run from repo root using root `.env`).
 
 **Adding new tests:** When you add or modify auth endpoints:
 1. Add a corresponding test to `suprwise/auth/test_endpoints.py`
@@ -97,7 +95,7 @@ This runs all test suites and reports results. **Run this after startup** to ver
 
 **Manual OTP generation for testing:**
 ```bash
-cd github-backend-main && python3 -c "
+python3 -c "
 import sqlite3, random, string
 from datetime import datetime, timezone, timedelta
 conn = sqlite3.connect('./data/suprwise.db')
@@ -137,6 +135,29 @@ npm run lint     # ESLint
 ```
 
 Set `VITE_API_BASE` for the API URL (defaults to `/api` proxy). Set `VITE_GOOGLE_CLIENT_ID` to match `GOOGLE_CLIENT_ID` in backend for Google OAuth.
+
+### Local dev invariants (READ THIS — prevents the recurring "Test Login stuck on Signing in…" bug)
+
+The symptom: clicking **Test Login** hangs on "Signing in…". The cause is always the
+same — the Vite dev proxy is pointing at a backend that isn't there. The login itself
+is fine (the test user `9010719021` lives in the live `./data/suprwise.db`); it's a
+plumbing mismatch. Keep these invariants and it cannot recur:
+
+1. **Exactly one Vite config: `vite.config.ts`.** Never create or commit a
+   `vite.config.js` — it's a `tsc` artifact, and Vite resolves it *before* the `.ts`,
+   silently shadowing the real config with stale settings. If you see a `vite.config.js`,
+   delete it.
+2. **The proxy target must match the port you run uvicorn on.** Don't hardcode the port
+   in two places. The target is env-driven: `process.env.VITE_PROXY_TARGET || <default>`
+   in `vite.config.ts`. If your backend port changes, set `VITE_PROXY_TARGET`
+   (e.g. `VITE_PROXY_TARGET=http://127.0.0.1:8000 npm run dev`) — never edit a second file.
+3. **`tsconfig` is `noEmit`.** Never commit compiled `*.js`, `*.js.map`, `*.d.ts`, or
+   `*.d.ts.map` under `src/` (only the authored `src/vite-env.d.ts` and
+   `src/types/globals.d.ts` belong there). `.gitignore` enforces this; don't override it.
+4. **Run only one backend instance at a time.** If Test Login hangs, a stray uvicorn on
+   another port is the usual culprit. Check with
+   `lsof -nP -iTCP -sTCP:LISTEN | grep -E "80|51"` and kill the duplicate, then confirm
+   the surviving backend's port matches the Vite proxy target.
 
 ### Architecture
 

@@ -18,8 +18,7 @@ echo "============================================================"
 echo ""
 
 # Define all test files (in priority order: auth first, then integrations)
-# Note: github-backend-main/ tests are in a stale backend copy and use outdated settings.
-# The live backend is ./suprwise/ (from root .env). Only run tests from the live backend.
+# The live backend is ./suprwise/ (from root .env).
 TEST_FILES=(
     "suprwise/auth/test_endpoints.py"
 )

@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import type { Client } from '../../types';
+import type { GSTDetails } from '../../types/gst';
+import { verifyGST } from '../../services/gst';
 import { Modal } from '../../components/ui/Modal';
 
 export function ClientsPage({ active }: { active: boolean }) {
@@ -20,6 +22,7 @@ export function ClientsPage({ active }: { active: boolean }) {
   const [stateName, setStateName] = useState('');
   const [pincode, setPincode] = useState('');
   const [contactPerson, setContactPerson] = useState('');
+  const [gstVerifying, setGstVerifying] = useState(false);
 
   const filteredClients = useMemo(() => {
     return (state.clients || []).filter(c =>
@@ -64,6 +67,31 @@ export function ClientsPage({ active }: { active: boolean }) {
       setIsModalOpen(false);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save client', 'error');
+    }
+  }
+
+  function handleGstVerified(details: GSTDetails) {
+    const ppob = details.principal_place_of_business;
+    setName(prev => details.legal_name || details.trade_name || prev);
+    if (ppob?.address) setAddress(ppob.address);
+    if (ppob?.city) setCity(ppob.city);
+    if (ppob?.state) setStateName(ppob.state);
+    if (ppob?.pincode) setPincode(ppob.pincode);
+    showToast('Client details autofilled from GSTIN', 'success');
+  }
+
+  async function handleVerifyGst() {
+    if (!gstin.trim()) return;
+    setGstVerifying(true);
+    try {
+      const res = await verifyGST(gstin);
+      if (res.success && res.data) {
+        handleGstVerified(res.data);
+      } else {
+        showToast(res.error || 'GST verification failed', 'error');
+      }
+    } finally {
+      setGstVerifying(false);
     }
   }
 
@@ -172,8 +200,31 @@ export function ClientsPage({ active }: { active: boolean }) {
             <input type="text" value={name} onChange={e => setName(e.target.value)} className="inp" placeholder="e.g. Reliance Projects" style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', outline: 'none' }} />
           </div>
           <div className="form-group">
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: 6 }}>GSTIN</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' }}>GSTIN</label>
+              <button type="button" className="btn-sm accent" disabled={gstVerifying || !gstin.trim()} onClick={handleVerifyGst} style={{ padding: '4px 12px', fontSize: 11, height: 'auto', borderRadius: 8 }}>
+                {gstVerifying ? 'Verifying…' : 'Verify GST'}
+              </button>
+            </div>
             <input type="text" value={gstin} onChange={e => setGstin(e.target.value.toUpperCase())} className="inp" placeholder="27AAAAA0000A1Z5" style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', outline: 'none' }} />
+          </div>
+          <div className="form-group">
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: 6 }}>Address</label>
+            <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="inp" placeholder="Street, area" style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', outline: 'none' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: 6 }}>City</label>
+              <input type="text" value={city} onChange={e => setCity(e.target.value)} className="inp" placeholder="City" style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', outline: 'none' }} />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: 6 }}>State</label>
+              <input type="text" value={stateName} onChange={e => setStateName(e.target.value)} className="inp" placeholder="State" style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', outline: 'none' }} />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', marginBottom: 6 }}>Pincode</label>
+              <input type="text" value={pincode} onChange={e => setPincode(e.target.value)} className="inp" placeholder="000000" style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', outline: 'none' }} />
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="form-group">
