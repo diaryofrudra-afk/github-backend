@@ -4,23 +4,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#000000" />
   <title>Suprwise</title>
-  <script>
-    // Set theme-color before paint so the mobile browser chrome (status/address
-    // bar) matches the app background — avoids the white bar at the top.
-    (function () {
-      var t = localStorage.getItem('rudra_theme') || 'dark';
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f8f9ff' : '#000000');
-    })();
-  </script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fleet App" />
+  <link rel="apple-touch-icon" href="/crane-logo.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <!--
+    Intentionally NO <meta name="theme-color">. Setting theme-color makes iOS
+    Safari paint its status bar / toolbar as a SOLID opaque fill, which hides the
+    page behind it. Omitting it keeps that chrome translucent so the actual page
+    content shows through it edge-to-edge (full-screen), which is the goal here.
+    `viewport-fit=cover` (above) makes content reach into the status-bar / home-
+    indicator areas; native document scrolling lets it pass behind the chrome.
+  -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script>
@@ -125,6 +126,9 @@
 <body>
   <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('rudra_theme') || 'dark')</script>
   <div id="root"></div>
+  <!-- Invisible shim so iOS Safari renders its bottom toolbar as translucent glass
+       rather than a solid bar (see #safari-shim in mobile-shell.css). -->
+  <div id="safari-shim"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

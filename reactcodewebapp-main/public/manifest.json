@@ -1,0 +1,16 @@
+{
+  "name": "Fleet App",
+  "short_name": "Fleet",
+  "display": "standalone",
+  "background_color": "#F5EEF2",
+  "theme_color": "#F5EEF2",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/crane-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
